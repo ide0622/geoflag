@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>GeoFlag</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* ===== Top background: drifting English questions (VISIBLE) ===== */
+    .bg-question {
+      position: absolute;
+      left: 0;
+      white-space: nowrap;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      color: rgba(0, 0, 0, 0.18);
+      z-index: 0;
+      transform: rotate(-20deg);
+      animation-name: drift;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+      will-change: transform;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+      pointer-events: none; /* 背景がクリックを遮らないように */
+    }
+    /* スタートボタンの地球アイコン用アニメーション */
+    .globe-icon { transition: transform 320ms cubic-bezier(.2,.9,.2,1); transform-origin:center; }
+    .globe-zoom { transform: scale(1.26); }
+    /* フェード用（start screen のシームレスな遷移） */
+    #startScreen { transition: opacity 420ms ease; }
+    /* 背景テキスト領域を前景要素より下に置くための z-index */
+    #questionBackground { display: block !important; z-index: 0; pointer-events: none; }
+    /* 勝者フィールドの強調 */
+    .winner-highlight {
+      transform: scale(1.05);
+      transition: all 0.4s ease;
+      position: relative;
+      animation: winner-pulse 0.6s ease-out;
+    }
+    /* プレイヤー勝利時（赤） */
+    .winner-highlight.player-win {
+      border: 4px solid #ef4444;
+      box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+    }
+    .winner-highlight.player-win::after {
+      content: "WIN";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #ef4444;
+      color: #fff;
+      font-weight: 900;
+      font-size: 1.2rem;
+      padding: 4px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      animation: win-badge-bounce 0.6s ease-out;
+    }
+    /* CPU勝利時（青） */
+    .winner-highlight.cpu-win {
+      border: 4px solid #3b82f6;
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+    }
+    .winner-highlight.cpu-win::after {
+      content: "WIN";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #3b82f6;
+      color: #fff;
+      font-weight: 900;
+      font-size: 1.2rem;
+      padding: 4px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      animation: win-badge-bounce 0.6s ease-out;
+    }
+    @keyframes winner-pulse {
+      0% { transform: scale(0.95); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1.05); }
+    }
+    @keyframes win-badge-bounce {
+      0% { transform: scale(0) rotate(-45deg); }
+      50% { transform: scale(1.2) rotate(0deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    /* 敗北フィールドの表現 */
+    .loser-highlight {
+      border: 4px solid #9ca3af;
+      box-shadow: 0 0 20px rgba(156, 163, 175, 0.4), inset 0 0 15px rgba(0, 0, 0, 0.1);
+      transform: scale(0.98);
+      opacity: 0.75;
+      transition: all 0.4s ease;
+      position: relative;
+      filter: brightness(0.85);
+      animation: loser-shake 0.4s ease-out;
+    }
+    @keyframes loser-shake {
+      0%, 100% { transform: scale(0.98) translateX(0); }
+      25% { transform: scale(0.98) translateX(-5px); }
+      75% { transform: scale(0.98) translateX(5px); }
+    }
+    .loser-highlight::after {
+      content: "LOSE";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: #9ca3af;
+      color: #fff;
+      font-weight: 900;
+      font-size: 1.2rem;
+      padding: 4px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      animation: lose-badge-appear 0.6s ease-out;
+    }
+    @keyframes lose-badge-appear {
+      0% { opacity: 0; transform: translateY(-20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    #playerField, #cpuField {
+      transition: all 0.4s ease;
+      position: relative;
+    }
+    /* SP版で国旗画像の長押しメニューを無効化 */
+    img {
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      pointer-events: auto;
+    }
+    /* 地図モーダル用のスタイル */
+    .country-flag-interactive {
+      cursor: pointer;
+      transition: transform 0.2s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .country-flag-interactive:active {
+      transform: scale(0.95);
+    }
+    /* SP版でバトルフィールドの高さを縮小 */
+    @media (max-width: 768px) {
+      #playerField, #cpuField {
+        font-size: 3rem !important;
+        padding: 1.5rem !important;
+        min-height: auto;
+      }
+    }
+    @keyframes drift {
+      from { transform: translateX(-110vw) rotate(-20deg); }
+      to   { transform: translateX(110vw) rotate(-20deg); }
+    }
+    /* 勝負ボタン用パルスアニメーション */
+    @keyframes pulse-button {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    .pulse-animation {
+      animation: pulse-button 0.6s ease-in-out;
+    }
+    /* 画面フラッシュエフェクト */
+    @keyframes screen-flash {
+      0% { background-color: rgba(255, 255, 255, 0); }
+      50% { background-color: rgba(255, 255, 255, 0.3); }
+      100% { background-color: rgba(255, 255, 255, 0); }
+    }
+    .flash-effect {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      animation: screen-flash 0.6s ease-out;
+      z-index: 1000;
+    }
+    /* フィールド登場アニメーション */
+    @keyframes field-appear {
+      0% { opacity: 0; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .field-appear {
+      animation: field-appear 0.5s ease-out 0.3s both;
+    }
+    /* 勝負ボタン用グロー効果 */
+    @keyframes button-glow {
+      0%, 100% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.4), 0 4px 20px rgba(0, 0, 0, 0.15); }
+      50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), 0 4px 30px rgba(0, 0, 0, 0.2); }
+    }
+    /* 順次表示アニメーション */
+    .fade-in-up {
+      animation: fade-in-up-effect 0.3s ease-out forwards;
+    }
+    @keyframes fade-in-up-effect {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .hidden-initially {
+      opacity: 0;
+    }
+    #confirmCardBtn:not(:disabled) {
+      animation: button-glow 2s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 text-gray-900">
+
+  <!-- ===== START SCREEN ===== -->
+  <section id="startScreen"
+    class="relative min-h-screen flex flex-col items-center justify-center gap-8 overflow-hidden bg-gray-100">
+
+    <!-- 背景：英語問題文（動く） -->
+    <div id="questionBackground"
+      class="absolute inset-0 pointer-events-none select-none overflow-hidden"></div>
+
+    <!-- 前景 -->
+    <h1 class="relative z-20 text-7xl font-extrabold tracking-wide flex items-center justify-center drop-shadow-lg">
+      GeoFlag
+    </h1>
+
+    <div class="relative z-10 flex flex-col gap-4">
+      <button id="startGame" aria-label="国旗バトル"
+        class="px-6 py-3 bg-blue-600 text-white text-2xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="globe-icon w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M2 12h20" />
+          <path d="M12 3c3 3 3 15 0 18" />
+          <path d="M12 3c-3 3-3 15 0 18" />
+        </svg>
+        <span>国旗バトル</span>
+      </button>
+
+      <!-- 作成中ゲーム -->
+      <button id="inDevGamesBtn" aria-label="作成中ゲーム"
+        class="px-6 py-3 bg-gray-400 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+        <span>作成中ゲーム</span>
+      </button>
+    </div>
+
+    <p class="relative z-10 text-gray-500 text-sm">
+      choose flags wisely
+    </p>
+  </section>
+
+  <!-- ===== IN DEV GAMES SCREEN ===== -->
+  <section id="inDevGamesScreen" class="hidden relative min-h-screen flex flex-col items-center justify-center gap-8 overflow-hidden bg-gray-100">
+    <!-- 背景：英語問題文（動く） -->
+    <div class="absolute inset-0 pointer-events-none select-none overflow-hidden"></div>
+
+    <!-- 戻るボタン（左上） -->
+    <button id="backToStartFromInDev" class="absolute top-4 left-4 z-50 px-4 py-2 bg-gray-500 text-white text-sm font-bold rounded-lg shadow-lg hover:bg-gray-600 hover:scale-105 transition">
+      ← トップに戻る
+    </button>
+
+    <!-- 前景 -->
+    <h1 class="relative z-20 text-5xl font-extrabold tracking-wide flex items-center justify-center drop-shadow-lg">
+      作成中ゲーム
+    </h1>
+
+    <div class="relative z-10 flex flex-col gap-4">
+      <button id="akineatorBtn" aria-label="国旗アキネーター"
+        class="px-6 py-3 bg-purple-600 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 19V5M5 12h14" />
+          <circle cx="12" cy="12" r="9" />
+        </svg>
+        <span>国旗アキネーター</span>
+      </button>
+
+      <button id="highlowBtn" aria-label="High&Low"
+        class="px-6 py-3 bg-cyan-600 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+          <path d="M8 8l-3-3m3 3l3-3m-3 3l3 3" />
+          <path d="M16 16l3 3m-3-3l-3 3m3-3l-3-3" />
+        </svg>
+        <span>High & Low</span>
+      </button>
+    </div>
+
+    <p class="relative z-10 text-gray-500 text-sm">
+      ※ 開発中のゲーム / under development
+    </p>
+  </section>
+
+  <!-- ===== GAME SCREEN (従来UI) ===== -->
+  <section id="gameScreen" class="hidden">
+
+    <!-- 問題リセットボタン（左上） -->
+    <button id="resetThemeBtn" class="absolute top-4 left-4 z-50 px-4 py-2 bg-yellow-500 text-white text-sm font-bold rounded-lg shadow-lg hover:bg-yellow-600 hover:scale-105 transition">
+      問題をリセット
+    </button>
+    <!-- 第一問の時のみ左下に問題シャッフルボタン -->
+    <button id="shuffleThemeBtn" style="display:none;" class="fixed left-4 bottom-4 z-50 px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg shadow-lg hover:bg-green-700 transition">
+      問題・手札をシャッフル
+    </button>
+
+    <!-- 問題一覧（常に表示） -->
+    <section class="sticky top-0 bg-white shadow p-2 md:p-4 z-50 border-b-2 border-gray-300">
+      <div id="roundList" class="flex gap-2 md:gap-4 overflow-x-auto md:overflow-x-visible md:flex-wrap md:justify-center pb-2 md:pb-0"></div>
+    </section>
+
+    <!-- プレイヤー手札とCPU手札 -->
+    <section class="max-w-5xl mx-auto mt-4 grid grid-cols-1 gap-6 px-4">
+      <!-- CPU手札 -->
+      <div class="bg-blue-50 p-6 rounded-xl shadow-md text-center order-1">
+        <h2 id="cpuHandTitle" class="text-xl font-semibold mb-2 flex items-center justify-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 9a7 7 0 0 1 14 0v1H5v-1z" />
+          </svg>
+          <span style="color: #2563eb;">CPUの手札</span>
+        </h2>
+        <div id="cpuHand" class="grid grid-cols-3 grid-rows-2 md:grid-cols-5 md:grid-rows-1 gap-2 sm:gap-4 place-items-center"></div>
+      </div>
+      <!-- ヒント削除（移動のため） -->
+
+      <!-- 現在の問題表示と次のラウンドボタン -->
+      <div id="currentThemeMobile" class="col-span-1 order-2 flex flex-row items-center gap-4">
+        <div class="bg-green-600 px-4 py-2 rounded-lg shadow-md text-center flex-1">
+          <div class="flex items-center justify-center gap-2">
+            <span id="currentThemeLabel" class="text-xs font-semibold text-white">第1問</span>
+            <span id="currentThemeText" class="text-base font-bold text-white"></span>
+          </div>
+        </div>
+        <button id="nextRound"
+          class="hidden px-4 py-2 bg-blue-600 text-white text-sm rounded-full shadow hover:bg-blue-700 transition whitespace-nowrap">
+          次のラウンドへ
+        </button>
+      </div>
+
+      <!-- 結果表示フィールド -->
+      <div class="col-span-1 order-3 grid grid-cols-2 gap-2">
+        <div class="bg-white p-2 rounded shadow text-center">
+          <h3 class="font-semibold text-sm mb-1 text-red-600">あなた</h3>
+          <div id="playerField" class="text-4xl text-black bg-red-50/90 rounded-lg p-2 shadow-sm" style="color:#000"></div>
+        </div>
+        <div class="bg-white p-2 rounded shadow text-center">
+          <h3 class="font-semibold text-sm mb-1 text-blue-600">CPU</h3>
+          <div id="cpuField" class="text-4xl text-black bg-blue-50/90 rounded-lg p-2 shadow-sm" style="color:#000"></div>
+        </div>
+        
+        <!-- 国旗長押しヒント -->
+        <div class="col-span-2 text-center mt-1">
+          <p class="inline-block text-sm font-bold text-gray-900 bg-yellow-100 px-3 py-1 rounded-full shadow-sm">
+            💡 国旗を長押しすると地図が表示されます
+          </p>
+        </div>
+      </div>
+
+      <!-- プレイヤー手札 -->
+      <div class="bg-red-50 p-6 rounded-xl shadow-md text-center order-4">
+        <div id="playerHand" class="grid grid-cols-3 grid-rows-2 md:grid-cols-5 md:grid-rows-1 gap-2 sm:gap-4 place-items-center"></div>
+        <div class="mt-4 flex flex-row items-center justify-center gap-4">
+          <h2 class="text-lg font-bold flex items-center gap-2 text-red-600">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-red-600" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-7 9a7 7 0 0 1 14 0v1H5v-1z" />
+            </svg>
+            あなたの手札
+          </h2>
+          <button id="confirmCardBtn" disabled class="px-6 py-2.5 md:px-8 md:py-3 bg-gradient-to-b from-green-500 to-green-700 text-white rounded-lg font-bold text-base md:text-lg cursor-not-allowed transition-all duration-200 hover:shadow-green-500/50 hover:shadow-xl hover:-translate-y-1 disabled:hover:translate-y-0 disabled:opacity-50 disabled:hover:shadow-none shadow-lg disabled:shadow-md relative group">
+            <span class="relative z-10">GO</span>
+            <div class="absolute inset-0 bg-gradient-to-b from-green-400 to-green-600 rounded-lg opacity-0 group-hover:opacity-50 transition-opacity duration-200"></div>
+          </button>
+        </div>
+      </div>
+      <!-- 下部ヒント削除 -->
+    </section>
+
+    <!-- 選択中の設定表示 -->
+    <!-- 国旗長押しヒント（国難易度の上） -->
+    <!-- 上部ヒント削除 -->
+    <!-- 国旗長押しヒント（国難易度の上） -->
+    <div class="max-w-5xl mx-auto mt-2 px-4 text-center">
+      <p class="text-base">国旗を長押しで国名を確認</p>
+    </div>
+    <div id="gameSettings" class="max-w-5xl mx-auto mt-2 px-4 text-center">
+      <p class="text-xs text-gray-600"></p>
+    </div>
+  </section>
+
+  <!-- ===== LEVEL SELECT SCREEN ===== -->
+  <section id="levelSelectScreen"
+    class="hidden min-h-screen flex flex-col items-center justify-center gap-8 relative overflow-hidden bg-gray-100">
+
+    <!-- 背景：首都名（動く） -->
+    <div id="levelBackground"
+      class="absolute inset-0 pointer-events-none select-none overflow-hidden"></div>
+
+    <h2 class="relative z-20 text-4xl font-bold text-gray-800">国難易度を選択</h2>
+
+    <div class="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+
+      <button id="groupEasy" data-group="easy"
+        class="px-6 py-4 bg-green-500 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-green-600 hover:scale-105 transition country-btn">
+        Level1
+        <div class="text-xs font-normal mt-1">30カ国</div>
+      </button>
+
+      <button id="groupNormal" data-group="normal"
+        class="px-6 py-4 bg-green-600 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-green-700 hover:scale-105 transition country-btn">
+        Level2
+        <div class="text-xs font-normal mt-1">50カ国</div>
+      </button>
+
+      <button id="groupHard" data-group="hard"
+        class="px-6 py-4 bg-green-700 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-green-800 hover:scale-105 transition country-btn">
+        Level3
+        <div class="text-xs font-normal mt-1">50カ国</div>
+      </button>
+        <button id="groupExtreme" data-group="extreme"
+          class="px-6 py-4 bg-green-800 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-green-800 hover:scale-105 transition country-btn">
+          Level4
+          <div class="text-xs font-normal mt-1">50カ国</div>
+        </button>
+            <button id="groupWorldCup" data-group="worldcup"
+        class="px-6 py-4 bg-purple-500 text-white text-lg font-bold rounded-lg shadow-lg hover:bg-purple-600 hover:scale-105 transition country-btn">
+        2026W杯出場国
+        <div class="text-xs font-normal mt-1">40カ国</div>
+      </button>
+    </div>
+
+    <h2 class="relative z-20 text-3xl font-bold text-gray-800 mt-8">CPUレベルを選択</h2>
+
+    <div class="relative z-10 flex flex-row gap-2 md:gap-6">
+      <button id="levelBeginner" data-level="beginner"
+        class="px-4 py-4 md:px-8 md:py-6 bg-blue-400 text-white text-lg md:text-2xl font-bold rounded-lg shadow-lg hover:bg-blue-500 hover:scale-105 transition level-btn">
+        弱い
+      </button>
+
+      <button id="levelIntermediate" data-level="intermediate"
+        class="px-4 py-4 md:px-8 md:py-6 bg-blue-600 text-white text-lg md:text-2xl font-bold rounded-lg shadow-lg hover:bg-blue-700 hover:scale-105 transition level-btn">
+        普通
+      </button>
+
+      <button id="levelAdvanced" data-level="advanced"
+        class="px-4 py-4 md:px-8 md:py-6 bg-blue-800 text-white text-lg md:text-2xl font-bold rounded-lg shadow-lg hover:bg-blue-900 hover:scale-105 transition level-btn">
+        強い
+      </button>
+    </div>
+
+
+    <!-- ラウンド数セクション -->
+    <div class="relative z-10 flex flex-col items-center mt-8">
+      <div class="text-xl font-bold text-gray-800 mb-2">ラウンド数</div>
+      <div class="flex flex-row gap-4">
+        <button id="round5" data-round="5" class="px-6 py-3 bg-gray-200 text-gray-800 text-lg font-bold rounded-lg shadow hover:bg-gray-300 transition round-btn">5ラウンド</button>
+        <button id="round9" data-round="9" class="px-6 py-3 bg-gray-200 text-gray-800 text-lg font-bold rounded-lg shadow hover:bg-gray-300 transition round-btn">9ラウンド</button>
+      </div>
+    </div>
+
+    <button id="startGameBtn"
+      class="relative z-10 mt-8 px-10 py-4 bg-gray-400 text-white text-xl font-bold rounded-lg shadow-lg cursor-not-allowed transition"
+      disabled>
+      スタート
+    </button>
+
+    <button id="backToStart"
+      class="relative z-10
+      class="mt-2 px-6 py-3 bg-gray-500 text-white text-lg rounded shadow hover:bg-gray-600 transition">
+      戻る
+    </button>
+  </section>
+
+  <!-- ===== AKINATOR SCREEN ===== -->
+  <section id="akinatorScreen"
+    class="hidden min-h-screen flex flex-col items-center justify-center gap-6 relative bg-gradient-to-b from-purple-50 to-purple-100 p-4">
+
+    <button id="backFromAkinator"
+      class="absolute top-4 right-4 px-6 py-3 bg-gray-600 text-white text-lg rounded shadow hover:bg-gray-700 transition">
+      戻る
+    </button>
+
+    <h2 class="text-5xl font-extrabold text-purple-800 mt-8">国旗アキネーター</h2>
+
+    <div id="akinatorContainer" class="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full">
+      <div id="questionArea">
+        <h3 id="questionText" class="text-2xl font-bold text-gray-800 mb-6"></h3>
+        <div class="flex gap-4">
+          <button id="akinatorYes" class="flex-1 px-6 py-4 bg-green-500 text-white text-xl font-bold rounded-lg shadow hover:bg-green-600 transition">
+            はい
+          </button>
+          <button id="akinatorNo" class="flex-1 px-6 py-4 bg-red-500 text-white text-xl font-bold rounded-lg shadow hover:bg-red-600 transition">
+            いいえ
+          </button>
+          <button id="akinatorMaybe" class="flex-1 px-6 py-4 bg-yellow-500 text-white text-xl font-bold rounded-lg shadow hover:bg-yellow-600 transition">
+            わからない
+          </button>
+        </div>
+        <button id="akinatorUndo" class="w-full mt-4 px-6 py-2 bg-gray-400 text-white text-lg font-bold rounded-lg shadow hover:bg-gray-500 transition">
+          戻る
+        </button>
+      </div>
+
+      <div id="resultArea" class="hidden text-center">
+        <p class="text-lg text-gray-600 mb-4">これですか？</p>
+        <div id="resultFlag" class="text-8xl mb-4"></div>
+        <p id="resultCountry" class="text-3xl font-bold text-gray-800 mb-6"></p>
+        <div class="flex gap-4">
+          <button id="akinatorCorrect" class="flex-1 px-6 py-4 bg-green-500 text-white text-lg font-bold rounded-lg shadow hover:bg-green-600 transition">
+            当たり！
+          </button>
+          <button id="akinatorWrong" class="flex-1 px-6 py-4 bg-red-500 text-white text-lg font-bold rounded-lg shadow hover:bg-red-600 transition">
+            ハズレ
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== HIGH & LOW GAME SCREEN ===== -->
+  <section id="highlowScreen"
+    class="hidden min-h-screen flex flex-col items-center justify-center gap-4 relative bg-gradient-to-b from-blue-50 to-blue-100 p-4">
+
+    <button id="backFromHighlow"
+      class="absolute top-4 right-4 px-6 py-3 bg-gray-600 text-white text-lg rounded shadow hover:bg-gray-700 transition">
+      戻る
+    </button>
+
+    <h2 class="text-5xl font-extrabold text-blue-800 mt-8">High & Low</h2>
+
+    <div id="highlowGameArea" class="bg-white p-8 rounded-lg shadow-lg max-w-3xl w-full">
+      <div id="gamePlayArea">
+        <!-- ゲーム比較エリア -->
+        <div class="grid grid-cols-3 gap-8 mb-8 items-center">
+          <!-- 自分の国旗（左） -->
+          <div id="myFlagArea" class="text-center cursor-pointer hover:opacity-70 transition">
+            <div id="myFlag" class="text-6xl mb-3"></div>
+            <p id="myCountry" class="text-sm font-bold text-gray-800 mb-2"></p>
+            <div id="myValue" class="text-lg font-bold text-green-600 mb-2"></div>
+          </div>
+
+          <!-- VS（中央） -->
+          <div class="flex items-center justify-center">
+            <p class="text-4xl font-bold text-gray-400">VS</p>
+          </div>
+
+          <!-- 山札の国旗（右） -->
+          <div id="deckFlagArea" class="text-center cursor-pointer hover:opacity-70 transition">
+            <div id="deckFlag" class="text-6xl mb-3"></div>
+            <p id="deckCountry" class="text-sm font-bold text-gray-800 mb-2"></p>
+            <div id="deckValue" class="text-lg font-bold text-blue-600 opacity-0 mb-2">?</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ゲーム終了エリア -->
+      <div id="gameOverArea" class="hidden text-center">
+        <p class="text-lg text-gray-600 mb-4">ゲーム終了</p>
+        <p class="text-3xl font-bold text-gray-800 mb-6">最終スコア: <span id="finalScore">0</span></p>
+        <div class="flex gap-4">
+          <button id="highlowRestart" class="flex-1 px-6 py-4 bg-blue-600 text-white text-lg font-bold rounded-lg shadow hover:bg-blue-700 transition">
+            もう一度プレイ
+          </button>
+          <button id="highlowBackHome" class="flex-1 px-6 py-4 bg-gray-600 text-white text-lg font-bold rounded-lg shadow hover:bg-gray-700 transition">
+            ホームに戻る
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SUMMARY SCREEN (従来UI) ===== -->
+  <section id="summaryScreen"
+    class="hidden min-h-screen flex flex-col items-center justify-center gap-6 relative">
+
+
+    <button id="replayBtn" class="block w-full mt-2 px-6 py-3 bg-green-600 text-white text-lg rounded shadow hover:bg-green-700 transition">
+      もう一度プレイ
+    </button>
+    <button id="restartGame"
+      class="block w-full mt-2 px-6 py-3 bg-blue-600 text-white text-lg rounded shadow hover:bg-blue-700 transition">
+      モード選択に戻る
+    </button>
+
+    <div id="summaryDetails" class="bg-white p-6 rounded shadow w-full"></div>
+    <div class="text-center mb-4">
+      <button id="showAllCountriesMapBtn" class="bg-blue-600 text-white text-base rounded-lg px-4 py-2 shadow hover:bg-blue-700 transition" style="user-select: none;">全ての国の位置を確認</button>
+    </div>
+
+    <!-- 選択中の設定表示 -->
+    <div id="summarySettings" class="w-full py-2 px-4 text-center hidden">
+      <p class="text-xs text-gray-600"></p>
+    </div>
+  </section>
+
+  <!-- ===== MAP MODAL ===== -->
+  <div id="mapModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50" style="touch-action: none;">
+    <div class="bg-white rounded-lg shadow-2xl max-w-3xl w-full mx-4 overflow-hidden">
+      <div class="bg-blue-600 text-white px-6 py-4 flex justify-between items-center">
+        <h3 id="mapModalTitle" class="text-2xl font-bold">国の位置</h3>
+        <button id="closeMapModal" class="text-white text-3xl hover:text-gray-200 transition">&times;</button>
+      </div>
+      <div id="mapModalContent" class="p-4">
+        <!-- 地図がここに表示されます -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Top background generator (main.jsに依存しない) -->
+  <script>
+    // お題テキストを削除し、大文字国名に置換（60カ国に拡張）
+    const THEMES_EN_BG = [
+      "UNITED STATES",
+      "CHINA",
+      "INDIA",
+      "JAPAN",
+      "GERMANY",
+      "FRANCE",
+      "UNITED KINGDOM",
+      "RUSSIA",
+      "BRAZIL",
+      "CANADA",
+      "AUSTRALIA",
+      "SOUTH KOREA",
+      "ITALY",
+      "SPAIN",
+      "MEXICO",
+      "INDONESIA",
+      "TURKEY",
+      "SAUDI ARABIA",
+      "SWITZERLAND",
+      "NETHERLANDS",
+      "SWEDEN",
+      "NORWAY",
+      "POLAND",
+      "ARGENTINA",
+      "SOUTH AFRICA",
+      "EGYPT",
+      "NIGERIA",
+      "PHILIPPINES",
+      "VIETNAM",
+      "THAILAND",
+      "BELGIUM",
+      "AUSTRIA",
+      "PORTUGAL",
+      "GREECE",
+      "CZECH REPUBLIC",
+      "ROMANIA",
+      "CHILE",
+      "PERU",
+      "COLOMBIA",
+      "VENEZUELA",
+      "PAKISTAN",
+      "BANGLADESH",
+      "IRAN",
+      "IRAQ",
+      "ISRAEL",
+      "UAE",
+      "KUWAIT",
+      "QATAR",
+      "MOROCCO",
+      "ALGERIA",
+      "TUNISIA",
+      "KENYA",
+      "ETHIOPIA",
+      "GHANA",
+      "SINGAPORE",
+      "MALAYSIA",
+      "MYANMAR",
+      "NEPAL",
+      "SRI LANKA",
+      "UZBEKISTAN"
+    ];
+
+    // 国ごとの主要2色（国旗の代表色）
+    const COUNTRY_COLORS = {
+      "UNITED STATES": ["#b22234","#3c3b6e"],
+      "CHINA": ["#de2910","#ffde00"],
+      "INDIA": ["#ff9933","#138808"],
+      "JAPAN": ["#ffffff","#ff0000"],
+      "GERMANY": ["#000000","#ffce00"],
+      "FRANCE": ["#0055a4","#ef4135"],
+      "UNITED KINGDOM": ["#012169","#cf142b"],
+      "RUSSIA": ["#0033a0","#ffffff"],
+      "BRAZIL": ["#009b3a","#ffdf00"],
+      "CANADA": ["#ff0000","#ffffff"],
+      "AUSTRALIA": ["#00205b","#ffcc00"],
+      "SOUTH KOREA": ["#ffffff","#c60c30"],
+      "ITALY": ["#008d46","#cf2b2b"],
+      "SPAIN": ["#aa151b","#ffc400"],
+      "MEXICO": ["#006847","#ce1126"],
+      "INDONESIA": ["#ff0000","#ffffff"],
+      "TURKEY": ["#e30a17","#ffffff"],
+      "SAUDI ARABIA": ["#006c35","#ffffff"],
+      "SWITZERLAND": ["#ff0000","#ffffff"],
+      "NETHERLANDS": ["#21468b","#ae1c28"],
+      "SWEDEN": ["#006aa7","#fecc00"],
+      "NORWAY": ["#ba0c2f","#00205b"],
+      "POLAND": ["#dc143c","#ffffff"],
+      "ARGENTINA": ["#74acdf","#ffd700"],
+      "SOUTH AFRICA": ["#007749","#ffb81c"],
+      "EGYPT": ["#ce1126","#000000"],
+      "NIGERIA": ["#008753","#ffffff"],
+      "PHILIPPINES": ["#0038a8","#ce1126"],
+      "VIETNAM": ["#da251d","#ffd700"],
+      "THAILAND": ["#0d2b56","#d52028"],
+      "BELGIUM": ["#000000","#fdda24"],
+      "AUSTRIA": ["#ef3340","#ffffff"],
+      "PORTUGAL": ["#046a38","#d71f28"],
+      "GREECE": ["#0d5eaf","#ffffff"],
+      "CZECH REPUBLIC": ["#11457e","#d7141a"],
+      "ROMANIA": ["#002b7f","#fcd116"],
+      "CHILE": ["#0039a6","#d52b1e"],
+      "PERU": ["#d91023","#ffffff"],
+      "COLOMBIA": ["#fcd116","#003893"],
+      "VENEZUELA": ["#fcd116","#00247d"],
+      "PAKISTAN": ["#01411c","#ffffff"],
+      "BANGLADESH": ["#006a4e","#f42a41"],
+      "IRAN": ["#239f40","#da0000"],
+      "IRAQ": ["#ce1126","#000000"],
+      "ISRAEL": ["#0038b8","#ffffff"],
+      "UAE": ["#00732f","#ff0000"],
+      "KUWAIT": ["#007a3d","#000000"],
+      "QATAR": ["#8d1b3d","#ffffff"],
+      "MOROCCO": ["#c1272d","#006233"],
+      "ALGERIA": ["#006233","#ffffff"],
+      "TUNISIA": ["#e70013","#ffffff"],
+      "KENYA": ["#000000","#bb0000"],
+      "ETHIOPIA": ["#078930","#fcdd09"],
+      "GHANA": ["#006b3f","#fcd116"],
+      "SINGAPORE": ["#ed2939","#ffffff"],
+      "MALAYSIA": ["#010066","#cc0001"],
+      "MYANMAR": ["#fecb00","#ea2839"],
+      "NEPAL": ["#dc143c","#003893"],
+      "SRI LANKA": ["#ffb81c","#8b0000"],
+      "UZBEKISTAN": ["#1eb53a","#0099b5"]
+    };
+
+    // HEX -> rgba helper
+    function hexToRgba(hex, alpha) {
+      if (!hex) return `rgba(0,0,0,${alpha})`;
+      const c = hex.replace('#','');
+      const r = parseInt(c.substring(0,2),16);
+      const g = parseInt(c.substring(2,4),16);
+      const b = parseInt(c.substring(4,6),16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function renderQuestionBackground() {
+      const bg = document.getElementById("questionBackground");
+      if (!bg) return;
+
+      bg.innerHTML = "";
+      const rows = 15; // シンプルに15行
+      
+      // 60カ国からランダムに15カ国を選択（重複なし）
+      const shuffled = [...THEMES_EN_BG].sort(() => Math.random() - 0.5);
+      const selectedCountries = shuffled.slice(0, rows);
+
+      for (let i = 0; i < rows; i++) {
+        const el = document.createElement("div");
+        el.className = "bg-question";
+        
+        const countryName = selectedCountries[i];
+        const colors = COUNTRY_COLORS[countryName] || ['#000000','#777777'];
+        
+        // 国旗の色でグラデーションを適用（透明度を上げて薄く）
+        const c1 = hexToRgba(colors[0], 0.15);
+        const c2 = hexToRgba(colors[1], 0.15);
+        const gradient = `linear-gradient(90deg, ${c1} 0%, ${c2} 100%)`;
+        el.innerHTML = `<span style="background:${gradient}; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;">${countryName}</span>`;
+        
+        // ランダムなフォントサイズ
+        const fontSize = 60 + Math.random() * 80;
+        el.style.fontSize = `${fontSize}px`;
+        
+        // 縦位置を均等に配置
+        const topPercent = (i / rows) * 100;
+        el.style.top = `${topPercent}%`;
+        
+        // アニメーション速度とディレイ
+        const duration = 40 + Math.random() * 30;
+        el.style.animationDuration = `${duration}s`;
+        el.style.animationDelay = `${-(Math.random() * duration)}s`;
+        
+        bg.appendChild(el);
+      }
+      }
+      // 呼び出し：もし DOMContentLoaded が既に発火していれば即時実行
+      try { console.debug && console.debug('attempting to attach or call renderQuestionBackground'); } catch(e) {}
+      if (document.readyState === 'loading') {
+        window.addEventListener("DOMContentLoaded", () => {
+          try { console.debug && console.debug('DOMContentLoaded - renderQuestionBackground'); } catch(e) {}
+          renderQuestionBackground();
+        });
+      } else {
+        try { console.debug && console.debug('document already ready - calling renderQuestionBackground'); } catch(e) {}
+        renderQuestionBackground();
+        }
+
+    // レベル選択画面の首都名背景
+    const CAPITALS_EN_BG = [
+      "WASHINGTON",
+      "BEIJING",
+      "NEW DELHI",
+      "TOKYO",
+      "BERLIN",
+      "PARIS",
+      "LONDON",
+      "MOSCOW",
+      "BRASILIA",
+      "OTTAWA",
+      "CANBERRA",
+      "SEOUL",
+      "ROME",
+      "MADRID",
+      "MEXICO CITY",
+      "JAKARTA",
+      "ANKARA",
+      "RIYADH",
+      "BERN",
+      "AMSTERDAM",
+      "STOCKHOLM",
+      "OSLO",
+      "WARSAW",
+      "BUENOS AIRES",
+      "PRETORIA",
+      "CAIRO",
+      "ABUJA",
+      "MANILA",
+      "HANOI",
+      "BANGKOK",
+      "BRUSSELS",
+      "VIENNA",
+      "LISBON",
+      "ATHENS",
+      "PRAGUE",
+      "BUCHAREST",
+      "SANTIAGO",
+      "LIMA",
+      "BOGOTA",
+      "CARACAS",
+      "ISLAMABAD",
+      "DHAKA",
+      "TEHRAN",
+      "BAGHDAD",
+      "JERUSALEM",
+      "ABU DHABI",
+      "KUWAIT CITY",
+      "DOHA",
+      "RABAT",
+      "ALGIERS",
+      "TUNIS",
+      "NAIROBI",
+      "ADDIS ABABA",
+      "ACCRA",
+      "SINGAPORE",
+      "KUALA LUMPUR",
+      "NAYPYIDAW",
+      "KATHMANDU",
+      "COLOMBO",
+      "TASHKENT"
+    ];
+
+    // 首都用の色（国旗と同じマッピング）
+    const CAPITAL_COLORS = COUNTRY_COLORS;
+    const CAPITAL_COUNTRY_MAP = {
+      "WASHINGTON": "UNITED STATES",
+      "BEIJING": "CHINA",
+      "NEW DELHI": "INDIA",
+      "TOKYO": "JAPAN",
+      "BERLIN": "GERMANY",
+      "PARIS": "FRANCE",
+      "LONDON": "UNITED KINGDOM",
+      "MOSCOW": "RUSSIA",
+      "BRASILIA": "BRAZIL",
+      "OTTAWA": "CANADA",
+      "CANBERRA": "AUSTRALIA",
+      "SEOUL": "SOUTH KOREA",
+      "ROME": "ITALY",
+      "MADRID": "SPAIN",
+      "MEXICO CITY": "MEXICO",
+      "JAKARTA": "INDONESIA",
+      "ANKARA": "TURKEY",
+      "RIYADH": "SAUDI ARABIA",
+      "BERN": "SWITZERLAND",
+      "AMSTERDAM": "NETHERLANDS",
+      "STOCKHOLM": "SWEDEN",
+      "OSLO": "NORWAY",
+      "WARSAW": "POLAND",
+      "BUENOS AIRES": "ARGENTINA",
+      "PRETORIA": "SOUTH AFRICA",
+      "CAIRO": "EGYPT",
+      "ABUJA": "NIGERIA",
+      "MANILA": "PHILIPPINES",
+      "HANOI": "VIETNAM",
+      "BANGKOK": "THAILAND",
+      "BRUSSELS": "BELGIUM",
+      "VIENNA": "AUSTRIA",
+      "LISBON": "PORTUGAL",
+      "ATHENS": "GREECE",
+      "PRAGUE": "CZECH REPUBLIC",
+      "BUCHAREST": "ROMANIA",
+      "SANTIAGO": "CHILE",
+      "LIMA": "PERU",
+      "BOGOTA": "COLOMBIA",
+      "CARACAS": "VENEZUELA",
+      "ISLAMABAD": "PAKISTAN",
+      "DHAKA": "BANGLADESH",
+      "TEHRAN": "IRAN",
+      "BAGHDAD": "IRAQ",
+      "JERUSALEM": "ISRAEL",
+      "ABU DHABI": "UAE",
+      "KUWAIT CITY": "KUWAIT",
+      "DOHA": "QATAR",
+      "RABAT": "MOROCCO",
+      "ALGIERS": "ALGERIA",
+      "TUNIS": "TUNISIA",
+      "NAIROBI": "KENYA",
+      "ADDIS ABABA": "ETHIOPIA",
+      "ACCRA": "GHANA",
+      "SINGAPORE": "SINGAPORE",
+      "KUALA LUMPUR": "MALAYSIA",
+      "NAYPYIDAW": "MYANMAR",
+      "KATHMANDU": "NEPAL",
+      "COLOMBO": "SRI LANKA",
+      "TASHKENT": "UZBEKISTAN"
+    };
+
+    function renderLevelBackground() {
+      const bg = document.getElementById("levelBackground");
+      if (!bg) return;
+
+      bg.innerHTML = "";
+      const rows = 15;
+      
+      const shuffled = [...CAPITALS_EN_BG].sort(() => Math.random() - 0.5);
+      const selectedCapitals = shuffled.slice(0, rows);
+
+      for (let i = 0; i < rows; i++) {
+        const el = document.createElement("div");
+        el.className = "bg-question";
+        
+        const capitalName = selectedCapitals[i];
+        const countryName = CAPITAL_COUNTRY_MAP[capitalName];
+        const colors = CAPITAL_COLORS[countryName] || ['#000000','#777777'];
+        
+        const c1 = hexToRgba(colors[0], 0.15);
+        const c2 = hexToRgba(colors[1], 0.15);
+        const gradient = `linear-gradient(90deg, ${c1} 0%, ${c2} 100%)`;
+        el.innerHTML = `<span style="background:${gradient}; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent;">${capitalName}</span>`;
+        
+        const fontSize = 60 + Math.random() * 80;
+        el.style.fontSize = `${fontSize}px`;
+        
+        const topPercent = (i / rows) * 100;
+        el.style.top = `${topPercent}%`;
+        
+        const duration = 40 + Math.random() * 30;
+        el.style.animationDuration = `${duration}s`;
+        el.style.animationDelay = `${-(Math.random() * duration)}s`;
+        
+        bg.appendChild(el);
+      }
+    }
+
+    // レベル選択画面が表示されたときに背景をレンダリング
+    if (document.readyState === 'loading') {
+      window.addEventListener("DOMContentLoaded", () => {
+        renderLevelBackground();
+      });
+    } else {
+      renderLevelBackground();
+    }
+    </script>
+
+    <!-- game logic -->
+    <script type="module" src="main.js"></script>
+
+    <!-- Inline fallback test to verify JS execution and button responsiveness -->
+    <script>
+      (function(){
+        try { console.log('inline fallback running'); } catch(e){}
+        const btn = document.getElementById('startGame');
+        if (btn) {
+          btn.addEventListener('click', function onFallbackStart(e){
+            try { console.log('fallback start clicked'); } catch(e){}
+            btn.classList.add('ring','ring-blue-300');
+            setTimeout(()=>btn.classList.remove('ring','ring-blue-300'), 600);
+          });
+        }
+        const bg = document.getElementById('questionBackground');
+        if (bg && bg.children.length === 0) {
+          const e = document.createElement('div');
+          e.className = 'bg-question';
+          e.style.top = '6%';
+          e.style.fontSize = '48px';
+          e.style.color = 'rgba(0,0,0,0.06)';
+          e.textContent = 'TEST BACKGROUND';
+          bg.appendChild(e);
+        }
+      })();
+    </script>
+    <script src="akinator.js"></script>
+    <script src="highlowgame.js"></script>
+  </body>
+  </html>
