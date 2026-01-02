@@ -136,10 +136,10 @@ function renderCountryList() {
   listDiv.appendChild(countDiv);
   filtered.forEach(c => {
     const div = document.createElement('div');
-    div.className = 'flex items-center gap-2 bg-white rounded shadow p-3 cursor-pointer hover:bg-blue-50';
+    div.className = 'col-span-1 bg-white rounded shadow p-3 cursor-pointer hover:bg-blue-50 flex flex-col items-center justify-center';
     div.innerHTML = `
-      ${c.flagImage ? `<img src="${c.flagImage}" alt="${c.name}" class="w-8 h-8 object-contain rounded border" />` : `<span class='w-8 h-8 flex items-center justify-center bg-gray-200 rounded border'>?</span>`}
-      <span class="text-lg">${c.name}</span>
+      ${c.flagImage ? `<img src="${c.flagImage}" alt="${c.name}" class="w-8 h-8 object-contain rounded border mb-2" />` : `<span class='w-8 h-8 flex items-center justify-center bg-gray-200 rounded border mb-2'>?</span>`}
+      <span class="text-lg text-center">${c.name}</span>
     `;
     div.onclick = () => showCountryStats(c);
     listDiv.appendChild(div);
