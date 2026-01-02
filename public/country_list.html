@@ -2,17 +2,24 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>国一覧 | GeoFlag</title>
+  <title>主要国一覧 | GeoFlag</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 text-gray-900">
   <div class="container mx-auto py-8">
-    <h1 class="text-3xl font-bold mb-6">国一覧</h1>
+    <h1 class="text-3xl font-bold mb-6">主要国一覧</h1>
     <div id="regionButtons" class="mb-4 flex flex-wrap gap-2"></div>
     <div id="countryList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-    <button onclick="window.location.href='index.html'" class="mt-8 px-6 py-2 bg-gray-500 text-white rounded shadow hover:bg-gray-600 transition">トップに戻る</button>
+      <div id="indicatorButtons" class="mb-4 flex flex-wrap gap-2"></div>
+      <div id="rankingTable" class="mb-4"></div>
+      <div id="indicatorButtons" class="mb-4 flex flex-wrap gap-2"></div>
+      <div id="rankingTable" class="mb-4"></div>
+    <button onclick="window.location.href='index.html'" class="fixed top-6 right-8 px-6 py-2 bg-gray-500 text-white rounded shadow hover:bg-gray-600 transition z-50">トップに戻る</button>
   </div>
+  <!-- Leaflet.js for OpenStreetMap -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="country_list.js"></script>
 </body>
 </html>
