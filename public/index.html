@@ -245,6 +245,16 @@
         <span>国旗バトル</span>
       </button>
 
+      <button id="countryListBtn" aria-label="国一覧"
+        class="px-6 py-3 bg-green-500 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M8 12h8" />
+          <path d="M12 8v8" />
+        </svg>
+        <span>国一覧</span>
+      </button>
+
       <!-- 作成中ゲーム -->
       <button id="inDevGamesBtn" aria-label="作成中ゲーム"
         class="px-6 py-3 bg-gray-400 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
@@ -258,6 +268,18 @@
     <p class="relative z-10 text-gray-500 text-sm">
       choose flags wisely
     </p>
+
+    <script>
+      // 「国一覧」ボタンで country_list.html へ遷移
+      document.addEventListener('DOMContentLoaded', function() {
+        var countryListBtn = document.getElementById('countryListBtn');
+        if (countryListBtn) {
+          countryListBtn.addEventListener('click', function() {
+            window.location.href = 'country_list.html';
+          });
+        }
+      });
+    </script>
   </section>
 
   <!-- ===== IN DEV GAMES SCREEN ===== -->
