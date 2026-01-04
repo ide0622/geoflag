@@ -567,16 +567,20 @@ function restartGame() {
 }
 
 function resetTheme() {
+  // 現在のラウンド数・国レベル・CPUレベル・国グループを保存
+  const prevRound = round;
+  const prevCpuLevel = cpuLevel;
+  const prevCountryGroup = selectedCountryGroup;
+  const prevRoundCount = selectedRoundCount;
+
   // 問題のみをリセット（CPUレベルと国グループはそのまま）
-  
-  // 選択された国グループで国をフィルタリング
   let filteredCountries = countries;
   if (selectedCountryGroup && COUNTRY_GROUPS[selectedCountryGroup]) {
     const groupNames = COUNTRY_GROUPS[selectedCountryGroup];
     filteredCountries = countries.filter(c => groupNames.includes(c.name));
   }
-  
-  // 問題をカテゴリー分けして、偏りなく5問選択
+
+  // 問題をカテゴリー分けして、偏りなくラウンド数分だけ選択
   const themeCategories = {
     population: ["population", "populationSmall", "density", "densityLow"],
     area: ["area", "areaSmall"],
@@ -599,37 +603,42 @@ function resetTheme() {
     wheatConsumption: ["wheatConsumption", "wheatConsumptionLow"],
     averageTemperature: ["averageTemperature", "averageTemperatureLow"]
   };
-  
-  // 各カテゴリーから最大1問ずつ選択
+
+
+  // 各カテゴリーから最大1問ずつ、ラウンド数分だけ選択
   const selectedThemes = [];
   const categoryKeys = Object.keys(themeCategories);
   const shuffledCategories = categoryKeys.sort(() => Math.random() - 0.5);
-  
   for (const category of shuffledCategories) {
-    if (selectedThemes.length >= 5) break;
-    
+    if (selectedThemes.length >= selectedRoundCount) break;
     const categoryThemeKeys = themeCategories[category];
     const availableThemes = allThemeDefinitions.filter(t => categoryThemeKeys.includes(t.key));
-    
     if (availableThemes.length > 0) {
       const randomTheme = availableThemes[Math.floor(Math.random() * availableThemes.length)];
       selectedThemes.push(randomTheme);
     }
   }
-  
+  // 足りない場合はランダム補充
+  while (selectedThemes.length < selectedRoundCount) {
+    const allThemes = allThemeDefinitions.filter(t => !selectedThemes.includes(t));
+    if (allThemes.length === 0) break;
+    const randomTheme = allThemes[Math.floor(Math.random() * allThemes.length)];
+    selectedThemes.push(randomTheme);
+  }
   themes = selectedThemes;
-  
-  // フィルタリングされた国から10カ国をランダムに選択（プレイヤー5枚、CPU5枚）
+
+  // フィルタリングされた国から2×ラウンド数分ランダムに選択（プレイヤー/CPU）
+  const handCount = selectedRoundCount;
   const shuffled = [...filteredCountries].sort(() => Math.random() - 0.5);
-  playerHand = shuffled.slice(0, 5);
-  cpuHand = shuffled.slice(5, 10);
-  
+  playerHand = shuffled.slice(0, handCount);
+  cpuHand = shuffled.slice(handCount, handCount * 2);
+
   // 手札が決まった後、distanceFromまたはareaSimilarToテーマの対象国を手札以外から選択
   const allHandCountries = [...playerHand, ...cpuHand];
   themes = themes.map(theme => {
     if (theme.key === "distanceFrom" || theme.key === "areaSimilarTo") {
-      const very_easyCountries = countries.filter(c => 
-        COUNTRY_GROUPS.easy.includes(c.name) && 
+      const very_easyCountries = countries.filter(c =>
+        COUNTRY_GROUPS.easy.includes(c.name) &&
         !allHandCountries.some(hand => hand.name === c.name)
       );
       if (very_easyCountries.length > 0) {
@@ -644,20 +653,25 @@ function resetTheme() {
     }
     return theme;
   });
-  round = 0;
+
+  // ラウンド数・CPUレベル・国グループ・ラウンド設定を復元
+  round = prevRound;
+  cpuLevel = prevCpuLevel;
+  selectedCountryGroup = prevCountryGroup;
+  selectedRoundCount = prevRoundCount;
   results = [];
-  
+
   // バトルフィールドを初期化して非表示
   playerField.innerHTML = "";
   cpuField.innerHTML = "";
   playerField.parentElement.parentElement.classList.add("hidden");
-  
+
   // UI更新
   renderRounds();
   renderHands();
   showTheme();
   nextBtn.classList.add("hidden");
-  
+
   // カード選択状態をリセット
   cardPlayed = false;
   selectedCardIndex = -1;
@@ -668,10 +682,11 @@ function showLevelSelect() {
   startScreen.classList.add("hidden");
   levelSelectScreen.classList.remove("hidden");
 
-  // デフォルト選択: 国難易度Level1, CPUレベル弱い, 5ラウンド
-  cpuLevel = "beginner";
-  selectedCountryGroup = "easy";
-  selectedRoundCount = 5;
+
+  // デフォルト選択: 国難易度Level1, CPUレベル弱い, 5ラウンド（未選択時のみ）
+  if (!cpuLevel) cpuLevel = "beginner";
+  if (!selectedCountryGroup) selectedCountryGroup = "easy";
+  if (!selectedRoundCount) selectedRoundCount = 5;
 
   // ボタンの選択状態をリセット
   levelButtons.forEach(b => {
