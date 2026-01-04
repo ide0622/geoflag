@@ -3,8 +3,78 @@
 // 指標リスト
 const indicators = [
   { key: 'area', label: '面積', unit: '千km²' },
-  { key: 'population', label: '人口', unit: '万人' }
+  { key: 'population', label: '人口', unit: '万人' },
+  { key: 'life', label: '平均寿命', unit: '年' },
+  { key: 'gdp', label: 'GDP', unit: '百万US$' },
+  { key: 'medals', label: 'メダル数', unit: '' },
+  { key: 'passport', label: 'パスポート', unit: '' },
+  { key: 'tourists', label: '観光客数', unit: '' },
+  { key: 'rain', label: '降水量', unit: 'mm' },
+  { key: 'altitude', label: '平均標高', unit: 'm' },
+  { key: 'rice', label: '米の消費量', unit: 't' },
+  { key: 'internet', label: 'インターネット普及率', unit: '%' },
+  { key: 'wheat', label: '小麦の消費量', unit: 't' },
+  { key: 'temp', label: '平均気温', unit: '℃' },
+  { key: 'bigmac', label: 'ビッグマック指数', unit: 'US$' },
+  { key: 'sleep', label: '睡眠時間', unit: 'h' },
+  { key: 'heritage', label: '世界遺産数', unit: '件' },
+  { key: 'happiness', label: '幸福度', unit: '' }
 ];
+
+// geodata.csvから平均寿命・GDPを取得しcountriesにマージ
+fetch('geodata.csv')
+  .then(res => res.text())
+  .then(csv => {
+    const lines = csv.split('\n');
+    const header = lines[0].split(',');
+    const nameIdx = header.indexOf('国名');
+    const lifeIdx = header.indexOf('平均寿命');
+    const gdpIdx = header.indexOf('GDP');
+    const medalsIdx = header.indexOf('メダル数');
+    const passportIdx = header.indexOf('パスポート');
+    const touristsIdx = header.indexOf('観光客数');
+    const rainIdx = header.indexOf('降水量');
+    const altitudeIdx = header.indexOf('平均標高');
+    const riceIdx = header.indexOf('米の消費量');
+    const internetIdx = header.indexOf('インターネット普及率');
+    const wheatIdx = header.indexOf('小麦の消費量');
+    const tempIdx = header.indexOf('平均気温');
+    const bigmacIdx = header.indexOf('ビッグマック指数');
+    const sleepIdx = header.indexOf('睡眠時間');
+    const heritageIdx = header.indexOf('世界遺産数');
+    const happinessIdx = header.indexOf('幸福度');
+    for (let i = 1; i < lines.length; ++i) {
+      const cols = lines[i].split(',');
+      if (cols.length < Math.max(nameIdx, lifeIdx, gdpIdx, medalsIdx, passportIdx, touristsIdx)) continue;
+      const name = cols[nameIdx];
+      const life = parseFloat(cols[lifeIdx]);
+      const gdp = parseFloat(cols[gdpIdx]);
+      const medals = parseFloat(cols[medalsIdx]);
+      const passport = parseFloat(cols[passportIdx]);
+      const tourists = parseFloat(cols[touristsIdx]);
+      const c = countries.find(c => c.name === name);
+      if (c) {
+        if (!isNaN(life)) c.life = life;
+        if (!isNaN(gdp)) c.gdp = Math.round(gdp / 1000); // 単位を百万US$に
+        if (!isNaN(medals)) c.medals = medals;
+        if (!isNaN(passport)) c.passport = passport;
+        if (!isNaN(tourists)) c.tourists = tourists;
+        if (!isNaN(cols[rainIdx])) c.rain = parseFloat(cols[rainIdx]);
+        if (!isNaN(cols[altitudeIdx])) c.altitude = parseFloat(cols[altitudeIdx]);
+        if (!isNaN(cols[riceIdx])) c.rice = parseFloat(cols[riceIdx]);
+        if (!isNaN(cols[internetIdx])) c.internet = parseFloat(cols[internetIdx]);
+        if (!isNaN(cols[wheatIdx])) c.wheat = parseFloat(cols[wheatIdx]);
+        if (!isNaN(cols[tempIdx])) c.temp = parseFloat(cols[tempIdx]);
+        if (!isNaN(cols[bigmacIdx])) c.bigmac = parseFloat(cols[bigmacIdx]);
+        if (!isNaN(cols[sleepIdx])) c.sleep = parseFloat(cols[sleepIdx]);
+        if (!isNaN(cols[heritageIdx])) c.heritage = parseFloat(cols[heritageIdx]);
+        if (!isNaN(cols[happinessIdx])) c.happiness = parseFloat(cols[happinessIdx]);
+      }
+    }
+    // ボタン・テーブル再描画
+    renderIndicatorButtons();
+    renderRankingTable();
+  });
 let currentIndicator = null;
 
 function renderIndicatorButtons() {
@@ -14,7 +84,8 @@ function renderIndicatorButtons() {
   indicators.forEach(ind => {
     const btn = document.createElement('button');
     btn.textContent = ind.label;
-    btn.className = 'px-3 py-1 m-1 rounded bg-green-100 text-green-800 hover:bg-green-300';
+    btn.className = `px-5 py-2 m-2 rounded-xl bg-gradient-to-b from-green-200 to-green-400 text-green-900 font-bold text-lg shadow-md transition-all duration-200 ease-in-out hover:from-green-300 hover:to-green-500 hover:scale-105 hover:shadow-lg`;
+    btn.style.letterSpacing = '0.05em';
     btn.onclick = () => {
       currentIndicator = ind.key;
       renderRankingTable();
@@ -31,7 +102,7 @@ function renderRankingTable() {
   if (!ind) return;
   const filtered = currentRegion === 'all' ? countries : countries.filter(c => c.region === currentRegion);
   const ranked = filtered
-    .filter(c => typeof c[ind.key] === 'number')
+    .filter(c => typeof c[ind.key] === 'number' && !isNaN(c[ind.key]))
     .sort((a, b) => b[ind.key] - a[ind.key]);
   const table = document.createElement('table');
   table.className = 'min-w-full border border-gray-200 bg-white rounded-lg shadow-sm overflow-hidden';
