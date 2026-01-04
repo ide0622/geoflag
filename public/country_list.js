@@ -29,22 +29,33 @@ function renderRankingTable() {
   if (!currentIndicator) return;
   const ind = indicators.find(i => i.key === currentIndicator);
   if (!ind) return;
-  // regionでフィルタ
   const filtered = currentRegion === 'all' ? countries : countries.filter(c => c.region === currentRegion);
-  // 指標で降順ソート
   const ranked = filtered
     .filter(c => typeof c[ind.key] === 'number')
     .sort((a, b) => b[ind.key] - a[ind.key]);
-  // テーブル生成
   const table = document.createElement('table');
-  table.className = 'min-w-full border border-gray-300 bg-white rounded';
+  table.className = 'min-w-full border border-gray-200 bg-white rounded-lg shadow-sm overflow-hidden';
   const thead = document.createElement('thead');
-  thead.innerHTML = `<tr class="bg-gray-200"><th class="px-2 py-1">順位</th><th class="px-2 py-1">国名</th><th class="px-2 py-1">${ind.label} (${ind.unit})</th></tr>`;
+  thead.innerHTML = `<tr class="bg-blue-50 text-blue-900">
+    <th class="px-3 py-2 font-semibold text-sm">順位</th>
+    <th class="px-3 py-2 font-semibold text-sm">国名</th>
+    <th class="px-3 py-2 font-semibold text-sm">${ind.label} (${ind.unit})</th>
+  </tr>`;
   table.appendChild(thead);
   const tbody = document.createElement('tbody');
   ranked.forEach((c, i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="px-2 py-1 text-center">${i + 1}</td><td class="px-2 py-1">${c.name}</td><td class="px-2 py-1 text-right">${c[ind.key]}</td>`;
+    tr.className = 'hover:bg-blue-100 transition';
+    tr.innerHTML = `
+      <td class="px-3 py-2 text-center">
+        <span class="inline-block bg-blue-500 text-white text-xs font-bold rounded-full px-2 py-1">${i + 1}</span>
+      </td>
+      <td class="px-3 py-2 flex items-center gap-2">
+        ${c.flagImage ? `<img src='${c.flagImage}' alt='${c.name}' class='w-6 h-6 object-contain' style='display:inline-block;vertical-align:middle;border-radius:0.2em;'/>` : ''}
+        <span>${c.name}</span>
+      </td>
+      <td class="px-3 py-2 text-right font-mono">${c[ind.key]}</td>
+    `;
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
@@ -90,14 +101,12 @@ const countries = [
   { name: "スイス", flagImage: "https://flagcdn.com/ch.svg", region: "Europe", area: 41, population: 900, capital: "ベルン", subregion: "西ヨーロッパ", lat: 46.9480, lng: 7.4474 },
   { name: "イタリア", flagImage: "https://flagcdn.com/it.svg", region: "Europe", area: 301, population: 6000, capital: "ローマ", subregion: "南ヨーロッパ", lat: 41.9028, lng: 12.4964 },
   { name: "ブラジル", flagImage: "https://flagcdn.com/br.svg", region: "Americas", area: 8516, population: 21300, capital: "ブラジリア", subregion: "南アメリカ", lat: -15.7939, lng: -47.8828 },
-  { name: "インド", flagImage: "https://flagcdn.com/in.svg", region: "Asia", area: 3287, population: 13900, capital: "ニューデリー", subregion: "南アジア", lat: 28.6139, lng: 77.2090 },
-  { name: "ロシア", flagImage: "https://flagcdn.com/ru.svg", region: "Europe", area: 17098, population: 14600, capital: "モスクワ", subregion: "東ヨーロッパ" },
-  { name: "トルコ", flagImage: "https://flagcdn.com/tr.svg", region: "Asia", area: 783, population: 8200, capital: "アンカラ", subregion: "西アジア" },
-  { name: "インドネシア", flagImage: "https://flagcdn.com/id.svg", region: "Asia", area: 1910, population: 27300, capital: "ジャカルタ", subregion: "東南アジア" },
-  { name: "アルゼンチン", flagImage: "https://flagcdn.com/ar.svg", region: "Americas", area: 2780, population: 4500, capital: "ブエノスアイレス", subregion: "南アメリカ" },
-  { name: "スウェーデン", flagImage: "https://flagcdn.com/se.svg", region: "Europe", area: 450, population: 1000, capital: "ストックホルム", subregion: "北ヨーロッパ" },
-  { name: "ポーランド", flagImage: "https://flagcdn.com/pl.svg", region: "Europe", area: 313, population: 3800, capital: "ワルシャワ", subregion: "東ヨーロッパ" },
-  { name: "ギリシャ", flagImage: "https://flagcdn.com/gr.svg", region: "Europe", area: 132, population: 1070, capital: "アテネ", subregion: "南ヨーロッパ" },
+  { name: "ロシア", flagImage: "https://flagcdn.com/ru.svg", region: "Europe", area: 17098, population: 14600, capital: "モスクワ", subregion: "東ヨーロッパ", lat: 55.7558, lng: 37.6173 },
+  { name: "トルコ", flagImage: "https://flagcdn.com/tr.svg", region: "Asia", area: 783, population: 8200, capital: "アンカラ", subregion: "西アジア", lat: 39.9334, lng: 32.8597 },
+  { name: "アルゼンチン", flagImage: "https://flagcdn.com/ar.svg", region: "Americas", area: 2780, population: 4500, capital: "ブエノスアイレス", subregion: "南アメリカ", lat: -34.6037, lng: -58.3816 },
+  { name: "スウェーデン", flagImage: "https://flagcdn.com/se.svg", region: "Europe", area: 450, population: 1000, capital: "ストックホルム", subregion: "北ヨーロッパ", lat: 59.3293, lng: 18.0686 },
+  { name: "ポーランド", flagImage: "https://flagcdn.com/pl.svg", region: "Europe", area: 313, population: 3800, capital: "ワルシャワ", subregion: "東ヨーロッパ", lat: 52.2297, lng: 21.0122 },
+  { name: "ギリシャ", flagImage: "https://flagcdn.com/gr.svg", region: "Europe", area: 132, population: 1070, capital: "アテネ", subregion: "南ヨーロッパ", lat: 37.9838, lng: 23.7275 },
   { name: "ウクライナ", flagImage: "https://flagcdn.com/ua.svg", region: "Europe", area: 604, population: 4400, capital: "キエフ", subregion: "東ヨーロッパ", lat: 49.0, lng: 32.0 },
   { name: "チェコ", flagImage: "https://flagcdn.com/cz.svg", region: "Europe", area: 79, population: 1100, capital: "プラハ", subregion: "中央ヨーロッパ", lat: 50.0, lng: 15.0 },
   { name: "アイルランド", flagImage: "https://flagcdn.com/ie.svg", region: "Europe", area: 70, population: 500, capital: "ダブリン", subregion: "北ヨーロッパ", lat: 53.0, lng: -8.0 },
@@ -108,6 +117,47 @@ const countries = [
   { name: "チリ", flagImage: "https://flagcdn.com/cl.svg", region: "Americas", area: 756, population: 1900, capital: "サンティアゴ", subregion: "南アメリカ", lat: -30.0, lng: -71.0 },
   { name: "ボリビア", flagImage: "https://flagcdn.com/bo.svg", region: "Americas", area: 1099, population: 1200, capital: "スクレ", subregion: "南アメリカ", lat: -17.0, lng: -65.0 },
   { name: "ウルグアイ", flagImage: "https://flagcdn.com/uy.svg", region: "Americas", area: 176, population: 300, capital: "モンテビデオ", subregion: "南アメリカ", lat: -33.0, lng: -56.0 },
+    { name: "中国", flagImage: "https://flagcdn.com/cn.svg", region: "Asia", area: 9597, population: 141200, capital: "北京", subregion: "東アジア", lat: 39.9042, lng: 116.4074 },
+    { name: "インド", flagImage: "https://flagcdn.com/in.svg", region: "Asia", area: 3287, population: 139000, capital: "ニューデリー", subregion: "南アジア", lat: 28.6139, lng: 77.2090 },
+    { name: "バングラデシュ", flagImage: "https://flagcdn.com/bd.svg", region: "Asia", area: 148, population: 16600, capital: "ダッカ", subregion: "南アジア", lat: 23.8103, lng: 90.4125 },
+    { name: "ベトナム", flagImage: "https://flagcdn.com/vn.svg", region: "Asia", area: 331, population: 9800, capital: "ハノイ", subregion: "東南アジア", lat: 21.0285, lng: 105.8542 },
+    { name: "タイ", flagImage: "https://flagcdn.com/th.svg", region: "Asia", area: 513, population: 7000, capital: "バンコク", subregion: "東南アジア", lat: 13.7563, lng: 100.5018 },
+    { name: "フィリピン", flagImage: "https://flagcdn.com/ph.svg", region: "Asia", area: 300, population: 11100, capital: "マニラ", subregion: "東南アジア", lat: 14.5995, lng: 120.9842 },
+    { name: "マレーシア", flagImage: "https://flagcdn.com/my.svg", region: "Asia", area: 330, population: 3300, capital: "クアラルンプール", subregion: "東南アジア", lat: 3.139, lng: 101.6869 },
+    { name: "シンガポール", flagImage: "https://flagcdn.com/sg.svg", region: "Asia", area: 0.72, population: 600, capital: "シンガポール", subregion: "東南アジア", lat: 1.3521, lng: 103.8198 },
+    { name: "パキスタン", flagImage: "https://flagcdn.com/pk.svg", region: "Asia", area: 881, population: 22500, capital: "イスラマバード", subregion: "南アジア", lat: 33.6844, lng: 73.0479 },
+    { name: "インドネシア", flagImage: "https://flagcdn.com/id.svg", region: "Asia", area: 1910, population: 27300, capital: "ジャカルタ", subregion: "東南アジア", lat: -6.2088, lng: 106.8456 },
+    { name: "ネパール", flagImage: "https://flagcdn.com/np.svg", region: "Asia", area: 147, population: 3000, capital: "カトマンズ", subregion: "南アジア", lat: 27.7172, lng: 85.3240 },
+    { name: "スリランカ", flagImage: "https://flagcdn.com/lk.svg", region: "Asia", area: 66, population: 2100, capital: "コロンボ", subregion: "南アジア", lat: 6.9271, lng: 79.8612 },
+    { name: "カザフスタン", flagImage: "https://flagcdn.com/kz.svg", region: "Asia", area: 2725, population: 1900, capital: "アスタナ", subregion: "中央アジア", lat: 51.1694, lng: 71.4491 },
+    { name: "モンゴル", flagImage: "https://flagcdn.com/mn.svg", region: "Asia", area: 1564, population: 300, capital: "ウランバートル", subregion: "東アジア", lat: 47.8864, lng: 106.9057 },
+    { name: "サモア", flagImage: "https://flagcdn.com/ws.svg", region: "Oceania", area: 2.8, population: 21, capital: "アピア", subregion: "ポリネシア", lat: -13.8507, lng: -171.7514 },
+    { name: "ニュージーランド", flagImage: "https://flagcdn.com/nz.svg", region: "Oceania", area: 268, population: 500, capital: "ウェリントン", subregion: "オーストラリア・ニュージーランド", lat: -41.2865, lng: 174.7762 },
+    { name: "パプアニューギニア", flagImage: "https://flagcdn.com/pg.svg", region: "Oceania", area: 463, population: 900, capital: "ポートモレスビー", subregion: "メラネシア", lat: -9.4438, lng: 147.1803 },
+    { name: "フィジー", flagImage: "https://flagcdn.com/fj.svg", region: "Oceania", area: 18, population: 90, capital: "スバ", subregion: "メラネシア", lat: -18.1248, lng: 178.4501 },
+    { name: "ソロモン諸島", flagImage: "https://flagcdn.com/sb.svg", region: "Oceania", area: 29, population: 70, capital: "ホニアラ", subregion: "メラネシア", lat: -9.4456, lng: 159.9729 },
+    { name: "バヌアツ", flagImage: "https://flagcdn.com/vu.svg", region: "Oceania", area: 12, population: 32, capital: "ポートビラ", subregion: "メラネシア", lat: -17.7333, lng: 168.3273 },
+    { name: "トンガ", flagImage: "https://flagcdn.com/to.svg", region: "Oceania", area: 0.7, population: 10, capital: "ヌクアロファ", subregion: "ポリネシア", lat: -21.1394, lng: -175.2044 },
+    { name: "キプロス", flagImage: "https://flagcdn.com/cy.svg", region: "Europe", area: 9.3, population: 140, capital: "ニコシア", subregion: "南ヨーロッパ", lat: 35.1856, lng: 33.3823 },
+    { name: "アイスランド", flagImage: "https://flagcdn.com/is.svg", region: "Europe", area: 103, population: 39, capital: "レイキャビク", subregion: "北ヨーロッパ", lat: 64.1265, lng: -21.8174 },
+    { name: "ルクセンブルク", flagImage: "https://flagcdn.com/lu.svg", region: "Europe", area: 2.6, population: 70, capital: "ルクセンブルク", subregion: "西ヨーロッパ", lat: 49.8153, lng: 6.1296 },
+    { name: "マルタ", flagImage: "https://flagcdn.com/mt.svg", region: "Europe", area: 0.32, population: 60, capital: "バレッタ", subregion: "南ヨーロッパ", lat: 35.8989, lng: 14.5146 },
+    { name: "エストニア", flagImage: "https://flagcdn.com/ee.svg", region: "Europe", area: 45, population: 130, capital: "タリン", subregion: "北ヨーロッパ", lat: 59.437, lng: 24.7536 },
+    { name: "ラトビア", flagImage: "https://flagcdn.com/lv.svg", region: "Europe", area: 64, population: 190, capital: "リガ", subregion: "北ヨーロッパ", lat: 56.9496, lng: 24.1052 },
+    { name: "リトアニア", flagImage: "https://flagcdn.com/lt.svg", region: "Europe", area: 65, population: 280, capital: "ビリニュス", subregion: "北ヨーロッパ", lat: 54.6872, lng: 25.2797 },
+    { name: "スロバキア", flagImage: "https://flagcdn.com/sk.svg", region: "Europe", area: 49, population: 540, capital: "ブラチスラヴァ", subregion: "東ヨーロッパ", lat: 48.1486, lng: 17.1077 },
+    { name: "スロベニア", flagImage: "https://flagcdn.com/si.svg", region: "Europe", area: 20, population: 210, capital: "リュブリャナ", subregion: "南ヨーロッパ", lat: 46.0569, lng: 14.5058 },
+    { name: "ルーマニア", flagImage: "https://flagcdn.com/ro.svg", region: "Europe", area: 238, population: 1900, capital: "ブカレスト", subregion: "東ヨーロッパ", lat: 44.4268, lng: 26.1025 },
+    { name: "ブルガリア", flagImage: "https://flagcdn.com/bg.svg", region: "Europe", area: 111, population: 700, capital: "ソフィア", subregion: "東ヨーロッパ", lat: 42.6977, lng: 23.3219 },
+    { name: "セルビア", flagImage: "https://flagcdn.com/rs.svg", region: "Europe", area: 88, population: 700, capital: "ベオグラード", subregion: "南ヨーロッパ", lat: 44.7866, lng: 20.4489 },
+    { name: "モンテネグロ", flagImage: "https://flagcdn.com/me.svg", region: "Europe", area: 14, population: 62, capital: "ポドゴリツァ", subregion: "南ヨーロッパ", lat: 42.4304, lng: 19.2594 },
+    { name: "北マケドニア", flagImage: "https://flagcdn.com/mk.svg", region: "Europe", area: 26, population: 208, capital: "スコピエ", subregion: "南ヨーロッパ", lat: 41.9973, lng: 21.4280 },
+    { name: "アルバニア", flagImage: "https://flagcdn.com/al.svg", region: "Europe", area: 29, population: 287, capital: "ティラナ", subregion: "南ヨーロッパ", lat: 41.3275, lng: 19.8187 },
+    { name: "モルドバ", flagImage: "https://flagcdn.com/md.svg", region: "Europe", area: 34, population: 260, capital: "キシナウ", subregion: "東ヨーロッパ", lat: 47.0105, lng: 28.8638 },
+    { name: "ベラルーシ", flagImage: "https://flagcdn.com/by.svg", region: "Europe", area: 208, population: 940, capital: "ミンスク", subregion: "東ヨーロッパ", lat: 53.9045, lng: 27.5615 },
+    { name: "ハンガリー", flagImage: "https://flagcdn.com/hu.svg", region: "Europe", area: 93, population: 970, capital: "ブダペスト", subregion: "東ヨーロッパ", lat: 47.4979, lng: 19.0402 },
+    { name: "ボツワナ", flagImage: "https://flagcdn.com/bw.svg", region: "Africa", area: 582, population: 230, capital: "ハボローネ", subregion: "南部アフリカ", lat: -24.6282, lng: 25.9231 },
+    { name: "ナミビア", flagImage: "https://flagcdn.com/na.svg", region: "Africa", area: 825, population: 250, capital: "ウィントフック", subregion: "南部アフリカ", lat: -22.5597, lng: 17.0832 },
   // ...（他の国も同様にarea, population, capital, subregionをmain.jsから追加）
 ];
 
