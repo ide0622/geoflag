@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>High&Lowクイズ - GeoFlag</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .highlow-card {
+      transition: all 0.3s ease;
+      min-height: 200px;
+    }
+    
+    .highlow-card:hover {
+      transform: scale(1.02);
+    }
+
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: #1f2937;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: #6b7280;
+      margin-top: 0.5rem;
+    }
+
+    .correct-answer {
+      animation: correctPulse 0.6s ease-out;
+    }
+
+    @keyframes correctPulse {
+      0% { transform: scale(0.95); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .wrong-answer {
+      animation: wrongShake 0.4s ease-out;
+    }
+
+    @keyframes wrongShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-orange-100 to-red-100 text-gray-900">
+
+  <!-- START SCREEN -->
+  <section id="highlowStartScreen" class="min-h-screen flex flex-col items-center justify-center gap-8 p-4">
+    <h1 class="text-6xl font-bold text-orange-700">High&Lowクイズ</h1>
+    
+    <div class="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+      <p class="text-lg mb-6">統計情報を比較して、<br />手札の国が山札の国より<br />値が大きいか小さいかを当てよう！</p>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-semibold mb-3">難易度を選択:</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button class="difficultyBtn px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition" data-difficulty="easy">
+            Level1
+          </button>
+          <button class="difficultyBtn px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition" data-difficulty="normal">
+            Level2
+          </button>
+          <button class="difficultyBtn px-3 py-2 bg-green-700 text-white rounded-lg hover:bg-green-800 transition" data-difficulty="hard">
+            Level3
+          </button>
+          <button class="difficultyBtn px-3 py-2 bg-green-800 text-white rounded-lg hover:bg-green-900 transition" data-difficulty="extreme">
+            Level4
+          </button>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">選択された難易度: <span id="selectedDifficulty">未選択</span></p>
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-semibold mb-2">統計項目を選択:</label>
+        <select id="statSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+          <option value="人口">人口</option>
+          <option value="面積">面積</option>
+          <option value="GDP">GDP</option>
+          <option value="平均寿命">平均寿命</option>
+          <option value="世界遺産数">世界遺産数</option>
+          <option value="インターネット普及率">インターネット普及率</option>
+          <option value="観光客数">観光客数</option>
+          <option value="降水量">降水量</option>
+        </select>
+      </div>
+
+      <button id="startHighlowBtn" disabled class="w-full px-8 py-3 bg-gray-400 text-white text-xl font-bold rounded-lg transition disabled:cursor-not-allowed">
+        スタート
+      </button>
+    </div>
+
+    <button id="backToMain" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+      メインに戻る
+    </button>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="highlowGameScreen" class="hidden min-h-screen flex flex-col items-center justify-center gap-6 p-4">
+    <!-- ヘッダー -->
+    <div class="w-full max-w-4xl flex justify-between items-center mb-4">
+      <button id="quitGame" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
+        中止
+      </button>
+      <div class="text-center">
+        <h2 class="text-3xl font-bold text-orange-700" id="statNameDisplay"></h2>
+        <p class="text-lg mt-2">スコア: <span id="scoreDisplay" class="font-bold">0</span> / <span id="totalDisplay">10</span></p>
+      </div>
+      <div class="w-20"></div>
+    </div>
+
+    <!-- ゲーム内容 -->
+    <div class="w-full max-w-4xl fade-in">
+      <!-- 山札の国（左） -->
+      <div class="mb-6 text-center">
+        <p class="text-sm text-gray-600 mb-2">山札</p>
+        <div class="highlow-card bg-gray-50 rounded-lg p-8 shadow-lg border-2 border-gray-200">
+          <div class="text-9xl" id="deckCountry">🇸🇪</div>
+          <p class="text-lg font-semibold text-gray-800 mb-4" id="deckCountryName">-</p>
+          <div class="stat-value" id="deckValue">-</div>
+          <div class="stat-label" id="deckLabel"></div>
+        </div>
+      </div>
+
+      <!-- 手札の国と選択肢（右） -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <p class="text-sm text-gray-600 mb-2">手札</p>
+          <div class="highlow-card bg-gray-50 rounded-lg p-8 shadow-lg border-2 border-gray-200">
+            <div class="text-9xl" id="handCountry">🇹🇷</div>
+            <p class="text-lg font-semibold text-gray-800 mb-4" id="handCountryName">-</p>
+            <p class="text-sm opacity-75 text-gray-700">統計値は？</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-4 justify-center">
+          <button id="highBtn" class="px-6 py-4 bg-red-500 text-white text-xl font-bold rounded-lg hover:bg-red-600 transition shadow-lg">
+            ↑ 高い (HIGH)
+          </button>
+          <button id="lowBtn" class="px-6 py-4 bg-blue-500 text-white text-xl font-bold rounded-lg hover:bg-blue-600 transition shadow-lg">
+            ↓ 低い (LOW)
+          </button>
+        </div>
+      </div>
+
+      <!-- 結果表示 -->
+      <div id="resultContainer" class="hidden mt-8">
+        <div id="resultMessage" class="text-center text-2xl font-bold mb-6"></div>
+        <div class="bg-white rounded-lg p-6 shadow-lg mb-6">
+          <div id="resultDetails" class="text-center"></div>
+        </div>
+        <button id="nextBtn" class="w-full px-6 py-3 bg-orange-600 text-white text-lg font-bold rounded-lg hover:bg-orange-700 transition">
+          次へ
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME OVER SCREEN -->
+  <section id="highlowGameOverScreen" class="hidden min-h-screen flex flex-col items-center justify-center gap-8 p-4">
+    <h1 class="text-5xl font-bold text-orange-700">ゲーム終了</h1>
+    
+    <div class="bg-white rounded-lg shadow-lg p-8 max-w-md text-center">
+      <p class="text-3xl font-bold mb-2">スコア</p>
+      <p class="text-6xl font-bold text-orange-600 mb-6"><span id="finalScore">0</span> / 10</p>
+      
+      <div id="resultEvaluation" class="text-lg mb-6"></div>
+      
+      <button id="restartBtn" class="w-full px-6 py-3 bg-orange-600 text-white text-lg font-bold rounded-lg hover:bg-orange-700 transition mb-3">
+        もう一度プレイ
+      </button>
+      <button id="backToMainFromGameOver" class="w-full px-6 py-3 bg-gray-500 text-white text-lg font-bold rounded-lg hover:bg-gray-600 transition">
+        メインに戻る
+      </button>
+    </div>
+  </section>
+
+  <script src="highlow.js"></script>
+</body>
+</html>
