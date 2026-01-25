@@ -245,24 +245,25 @@
         <span>国旗バトル</span>
       </button>
 
-      <button id="countryListBtn" aria-label="主要国一覧"
+      <button id="startFlagAkinator" aria-label="国旗アキネーター"
+        class="px-6 py-3 bg-purple-600 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v5l3 3" />
+        </svg>
+        <span>国旗アキネーター</span>
+      </button>
+
+      <button id="countryListBtn" aria-label="国データ一覧"
         class="px-6 py-3 bg-green-500 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="9" />
           <path d="M8 12h8" />
           <path d="M12 8v8" />
         </svg>
-        <span>主要国一覧</span>
+        <span>国データ一覧</span>
       </button>
 
-      <!-- 作成中ゲーム -->
-      <button id="inDevGamesBtn" aria-label="作成中ゲーム"
-        class="px-6 py-3 bg-gray-400 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 18l6-6-6-6" />
-        </svg>
-        <span>作成中ゲーム</span>
-      </button>
     </div>
 
     <p class="relative z-10 text-gray-500 text-sm">
@@ -282,45 +283,91 @@
     </script>
   </section>
 
-  <!-- ===== IN DEV GAMES SCREEN ===== -->
-  <section id="inDevGamesScreen" class="hidden relative min-h-screen flex flex-col items-center justify-center gap-8 overflow-hidden bg-gray-100">
-    <!-- 背景：英語問題文（動く） -->
-    <div class="absolute inset-0 pointer-events-none select-none overflow-hidden"></div>
+  <!-- ===== FLAG AKINATOR SCREEN ===== -->
+  <section id="flagAkinatorScreen"
+    class="hidden min-h-screen flex flex-col items-center justify-center gap-6 relative bg-gradient-to-b from-purple-50 to-indigo-100 p-4">
 
-    <!-- 戻るボタン（左上） -->
-    <button id="backToStartFromInDev" class="absolute top-4 left-4 z-50 px-4 py-2 bg-gray-500 text-white text-sm font-bold rounded-lg shadow-lg hover:bg-gray-600 hover:scale-105 transition">
+    <button id="flagAkinatorBack"
+      class="absolute top-4 left-4 px-4 py-2 bg-gray-600 text-white text-sm md:text-base font-bold rounded shadow hover:bg-gray-700 transition">
       ← トップに戻る
     </button>
 
-    <!-- 前景 -->
-    <h1 class="relative z-20 text-5xl font-extrabold tracking-wide flex items-center justify-center drop-shadow-lg">
-      作成中ゲーム
-    </h1>
+    <h2 class="text-5xl font-extrabold text-purple-800 mt-6">国旗アキネーター</h2>
 
-    <div class="relative z-10 flex flex-col gap-4">
-      <button id="akineatorBtn" aria-label="国旗アキネーター"
-        class="px-6 py-3 bg-purple-600 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 19V5M5 12h14" />
-          <circle cx="12" cy="12" r="9" />
-        </svg>
-        <span>国旗アキネーター</span>
-      </button>
+    <div class="bg-white/90 backdrop-blur p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-3xl border border-purple-100">
+      <p class="text-gray-700 leading-relaxed mb-4">
+        好きな国を心に思い浮かべてください。統計データを使った質問を一問ずつ投げかけ、どの国かを推理します。
+      </p>
 
-      <button id="highlowBtn" aria-label="High&Low"
-        class="px-6 py-3 bg-cyan-600 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 5v14M5 12h14" />
-          <path d="M8 8l-3-3m3 3l3-3m-3 3l3 3" />
-          <path d="M16 16l3 3m-3-3l-3 3m3-3l-3-3" />
-        </svg>
-        <span>High & Low</span>
-      </button>
+      <div class="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between mb-4">
+        <div class="text-sm text-purple-700 font-semibold">
+          <span id="akinatorStatus">候補: -- カ国</span>
+        </div>
+        <div class="text-xs text-gray-500">
+          geodata.csv の統計項目を利用して推理します。
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-xl p-6 shadow-lg mb-4">
+        <p class="text-sm uppercase tracking-wide opacity-90 mb-2">質問</p>
+        <h3 id="akinatorQuestion" class="text-2xl font-bold leading-snug">読み込み中...</h3>
+      </div>
+
+      <div id="akinatorAnswerGrid" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+        <button id="akinatorYes" class="w-full px-4 py-3 bg-emerald-600 text-white font-bold rounded-lg shadow hover:bg-emerald-700 transition">
+          はい
+        </button>
+        <button id="akinatorProbablyYes" class="w-full px-4 py-3 bg-emerald-400 text-white font-bold rounded-lg shadow hover:bg-emerald-500 transition">
+          どちらかというと はい
+        </button>
+        <button id="akinatorMaybe" class="w-full px-4 py-3 bg-amber-500 text-white font-bold rounded-lg shadow hover:bg-amber-600 transition">
+          わからない
+        </button>
+        <button id="akinatorProbablyNo" class="w-full px-4 py-3 bg-rose-400 text-white font-bold rounded-lg shadow hover:bg-rose-500 transition">
+          どちらかというと いいえ
+        </button>
+        <button id="akinatorNo" class="w-full px-4 py-3 bg-rose-600 text-white font-bold rounded-lg shadow hover:bg-rose-700 transition">
+          いいえ
+        </button>
+      </div>
+
+      <div id="akinatorResult" class="hidden bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div id="akinatorGuess" class="text-2xl font-bold text-gray-900 mb-1"></div>
+        <div id="akinatorGuessDetail" class="text-sm text-gray-600"></div>
+        <div class="mt-3 flex flex-wrap gap-3">
+          <button id="akinatorConfirmYes" class="px-4 py-2 bg-emerald-600 text-white font-semibold rounded-lg shadow hover:bg-emerald-700 transition">
+            はい
+          </button>
+          <button id="akinatorConfirmNo" class="px-4 py-2 bg-rose-600 text-white font-semibold rounded-lg shadow hover:bg-rose-700 transition">
+            いいえ
+          </button>
+        </div>
+      </div>
+
+      <div id="akinatorStatsDisplay" class="hidden bg-blue-50 border-2 border-blue-300 rounded-lg p-6">
+        <h3 id="statsCountryName" class="text-3xl font-bold text-blue-900 mb-4"></h3>
+        <div id="statsContent" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-800">
+        </div>
+        <div class="mt-4 flex gap-3">
+          <button id="akinatorStatsBack" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
+            もう一度やる
+          </button>
+        </div>
+      </div>
+
+      <div id="akinatorShortlist" class="hidden bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm text-gray-800"></div>
+
+      <div class="flex flex-wrap gap-3 mt-4">
+        <button id="akinatorRestart" class="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg shadow hover:bg-purple-700 transition">
+          もう一度やる
+        </button>
+        <button id="akinatorNext" class="px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow hover:bg-indigo-700 transition">
+          次の質問を出す
+        </button>
+      </div>
+
+      <p id="akinatorNotice" class="mt-4 text-xs text-gray-500">※ データが不足する場合は「わからない」を選んでください。</p>
     </div>
-
-    <p class="relative z-10 text-gray-500 text-sm">
-      ※ 開発中のゲーム / under development
-    </p>
   </section>
 
   <!-- ===== GAME SCREEN (従来UI) ===== -->
@@ -499,104 +546,6 @@
       class="mt-2 px-6 py-3 bg-gray-500 text-white text-lg rounded shadow hover:bg-gray-600 transition">
       戻る
     </button>
-  </section>
-
-  <!-- ===== AKINATOR SCREEN ===== -->
-  <section id="akinatorScreen"
-    class="hidden min-h-screen flex flex-col items-center justify-center gap-6 relative bg-gradient-to-b from-purple-50 to-purple-100 p-4">
-
-    <button id="backFromAkinator"
-      class="absolute top-4 right-4 px-6 py-3 bg-gray-600 text-white text-lg rounded shadow hover:bg-gray-700 transition">
-      戻る
-    </button>
-
-    <h2 class="text-5xl font-extrabold text-purple-800 mt-8">国旗アキネーター</h2>
-
-    <div id="akinatorContainer" class="bg-white p-8 rounded-lg shadow-lg max-w-2xl w-full">
-      <div id="questionArea">
-        <h3 id="questionText" class="text-2xl font-bold text-gray-800 mb-6"></h3>
-        <div class="flex gap-4">
-          <button id="akinatorYes" class="flex-1 px-6 py-4 bg-green-500 text-white text-xl font-bold rounded-lg shadow hover:bg-green-600 transition">
-            はい
-          </button>
-          <button id="akinatorNo" class="flex-1 px-6 py-4 bg-red-500 text-white text-xl font-bold rounded-lg shadow hover:bg-red-600 transition">
-            いいえ
-          </button>
-          <button id="akinatorMaybe" class="flex-1 px-6 py-4 bg-yellow-500 text-white text-xl font-bold rounded-lg shadow hover:bg-yellow-600 transition">
-            わからない
-          </button>
-        </div>
-        <button id="akinatorUndo" class="w-full mt-4 px-6 py-2 bg-gray-400 text-white text-lg font-bold rounded-lg shadow hover:bg-gray-500 transition">
-          戻る
-        </button>
-      </div>
-
-      <div id="resultArea" class="hidden text-center">
-        <p class="text-lg text-gray-600 mb-4">これですか？</p>
-        <div id="resultFlag" class="text-8xl mb-4"></div>
-        <p id="resultCountry" class="text-3xl font-bold text-gray-800 mb-6"></p>
-        <div class="flex gap-4">
-          <button id="akinatorCorrect" class="flex-1 px-6 py-4 bg-green-500 text-white text-lg font-bold rounded-lg shadow hover:bg-green-600 transition">
-            当たり！
-          </button>
-          <button id="akinatorWrong" class="flex-1 px-6 py-4 bg-red-500 text-white text-lg font-bold rounded-lg shadow hover:bg-red-600 transition">
-            ハズレ
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== HIGH & LOW GAME SCREEN ===== -->
-  <section id="highlowScreen"
-    class="hidden min-h-screen flex flex-col items-center justify-center gap-4 relative bg-gradient-to-b from-blue-50 to-blue-100 p-4">
-
-    <button id="backFromHighlow"
-      class="absolute top-4 right-4 px-6 py-3 bg-gray-600 text-white text-lg rounded shadow hover:bg-gray-700 transition">
-      戻る
-    </button>
-
-    <h2 class="text-5xl font-extrabold text-blue-800 mt-8">High & Low</h2>
-
-    <div id="highlowGameArea" class="bg-white p-8 rounded-lg shadow-lg max-w-3xl w-full">
-      <div id="gamePlayArea">
-        <!-- ゲーム比較エリア -->
-        <div class="grid grid-cols-3 gap-8 mb-8 items-center">
-          <!-- 自分の国旗（左） -->
-          <div id="myFlagArea" class="text-center cursor-pointer hover:opacity-70 transition">
-            <div id="myFlag" class="text-6xl mb-3"></div>
-            <p id="myCountry" class="text-sm font-bold text-gray-800 mb-2"></p>
-            <div id="myValue" class="text-lg font-bold text-green-600 mb-2"></div>
-          </div>
-
-          <!-- VS（中央） -->
-          <div class="flex items-center justify-center">
-            <p class="text-4xl font-bold text-gray-400">VS</p>
-          </div>
-
-          <!-- 山札の国旗（右） -->
-          <div id="deckFlagArea" class="text-center cursor-pointer hover:opacity-70 transition">
-            <div id="deckFlag" class="text-6xl mb-3"></div>
-            <p id="deckCountry" class="text-sm font-bold text-gray-800 mb-2"></p>
-            <div id="deckValue" class="text-lg font-bold text-blue-600 opacity-0 mb-2">?</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ゲーム終了エリア -->
-      <div id="gameOverArea" class="hidden text-center">
-        <p class="text-lg text-gray-600 mb-4">ゲーム終了</p>
-        <p class="text-3xl font-bold text-gray-800 mb-6">最終スコア: <span id="finalScore">0</span></p>
-        <div class="flex gap-4">
-          <button id="highlowRestart" class="flex-1 px-6 py-4 bg-blue-600 text-white text-lg font-bold rounded-lg shadow hover:bg-blue-700 transition">
-            もう一度プレイ
-          </button>
-          <button id="highlowBackHome" class="flex-1 px-6 py-4 bg-gray-600 text-white text-lg font-bold rounded-lg shadow hover:bg-gray-700 transition">
-            ホームに戻る
-          </button>
-        </div>
-      </div>
-    </div>
   </section>
 
   <!-- ===== SUMMARY SCREEN (従来UI) ===== -->
@@ -815,7 +764,7 @@
         
         bg.appendChild(el);
       }
-      }
+    }
       // 呼び出し：もし DOMContentLoaded が既に発火していれば即時実行
       try { console.debug && console.debug('attempting to attach or call renderQuestionBackground'); } catch(e) {}
       if (document.readyState === 'loading') {
@@ -826,7 +775,7 @@
       } else {
         try { console.debug && console.debug('document already ready - calling renderQuestionBackground'); } catch(e) {}
         renderQuestionBackground();
-        }
+      }
 
     // レベル選択画面の首都名背景
     const CAPITALS_EN_BG = [
@@ -1004,7 +953,7 @@
     }
     </script>
 
-    <!-- game logic -->
+    <script src="flag-akinator.js"></script>
     <script type="module" src="main.js"></script>
 
     <!-- Inline fallback test to verify JS execution and button responsiveness -->
@@ -1013,7 +962,7 @@
         try { console.log('inline fallback running'); } catch(e){}
         const btn = document.getElementById('startGame');
         if (btn) {
-          btn.addEventListener('click', function onFallbackStart(e){
+          btn.addEventListener('click', function onFallbackStart(){
             try { console.log('fallback start clicked'); } catch(e){}
             btn.classList.add('ring','ring-blue-300');
             setTimeout(()=>btn.classList.remove('ring','ring-blue-300'), 600);
@@ -1031,7 +980,5 @@
         }
       })();
     </script>
-    <script src="akinator.js"></script>
-    <script src="highlowgame.js"></script>
   </body>
   </html>
