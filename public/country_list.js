@@ -21,6 +21,16 @@ const indicators = [
   { key: 'happiness', label: '幸福度', unit: '' }
 ];
 
+// モバイル(SP)用: 指標カテゴリ（階層表示）
+const indicatorCategories = [
+  { key: 'geo', label: '地理', items: ['area', 'altitude', 'temp', 'rain'] },
+  { key: 'soc', label: '人口・社会', items: ['population', 'life', 'internet', 'sleep', 'happiness'] },
+  { key: 'eco', label: '経済', items: ['gdp', 'bigmac'] },
+  { key: 'tour', label: '観光・遺産', items: ['tourists', 'heritage'] },
+  { key: 'food', label: '食', items: ['rice', 'wheat'] },
+  { key: 'other', label: 'その他', items: ['medals', 'passport'] }
+];
+
 // geodata.csvからすべての国データを読み込む
 let countries = [];
 
@@ -103,25 +113,79 @@ function parseCSVCountries() {
     });
 }
 let currentIndicator = null;
+let currentIndicatorCategory = null; // SP用: 展開中カテゴリ
 
 function renderIndicatorButtons() {
   const indicatorDiv = document.getElementById('indicatorButtons');
   if (!indicatorDiv) return;
   indicatorDiv.innerHTML = '';
-  indicators.forEach(ind => {
+
+  const isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+
+  if (!isMobile) {
+    // PC: 従来のフラットなボタン群
+    const wrap = document.createElement('div');
+    wrap.className = 'flex flex-wrap gap-2';
+    indicators.forEach(ind => {
+      const btn = document.createElement('button');
+      btn.textContent = ind.label;
+      const isActive = currentIndicator === ind.key;
+      btn.className = isActive
+        ? 'px-4 py-2 m-1 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600'
+        : 'px-4 py-2 m-1 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200';
+      btn.onclick = () => {
+        currentIndicator = ind.key;
+        renderIndicatorButtons();
+        renderRankingTable();
+      };
+      wrap.appendChild(btn);
+    });
+    indicatorDiv.appendChild(wrap);
+    return;
+  }
+
+  // SP: カテゴリ → サブ指標の二層表示
+  const categoryBar = document.createElement('div');
+  categoryBar.className = '-mx-4 px-4 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-1';
+  indicatorCategories.forEach(cat => {
+    const isOpen = currentIndicatorCategory === cat.key;
     const btn = document.createElement('button');
-    btn.textContent = ind.label;
-    const isActive = currentIndicator === ind.key;
-    btn.className = isActive 
-      ? 'px-4 py-2 m-1 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600'
-      : 'px-4 py-2 m-1 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200';
+    btn.textContent = cat.label;
+    btn.className = (isOpen ? 'bg-blue-500 text-white ' : 'bg-blue-100 text-blue-800 ') +
+      'px-4 py-2 rounded-lg font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200 flex-shrink-0 snap-start';
     btn.onclick = () => {
-      currentIndicator = ind.key;
+      currentIndicatorCategory = (currentIndicatorCategory === cat.key ? null : cat.key);
       renderIndicatorButtons();
-      renderRankingTable();
     };
-    indicatorDiv.appendChild(btn);
+    categoryBar.appendChild(btn);
   });
+  indicatorDiv.appendChild(categoryBar);
+
+  // サブ指標（選択中のカテゴリのみ展開）
+  if (currentIndicatorCategory) {
+    const cat = indicatorCategories.find(c => c.key === currentIndicatorCategory);
+    if (cat) {
+      const sub = document.createElement('div');
+      sub.className = 'mt-2 flex flex-wrap gap-2';
+      cat.items.forEach(key => {
+        const ind = indicators.find(i => i.key === key);
+        if (!ind) return;
+        const isActive = currentIndicator === ind.key;
+        const b = document.createElement('button');
+        b.textContent = ind.label;
+        b.className = isActive
+          ? 'px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold shadow transition hover:bg-blue-700'
+          : 'px-3 py-2 rounded-lg bg-blue-50 text-blue-800 text-sm font-semibold shadow-sm transition hover:bg-blue-100';
+        b.onclick = () => {
+          currentIndicator = ind.key;
+          renderIndicatorButtons();
+          renderRankingTable();
+        };
+        sub.appendChild(b);
+      });
+      indicatorDiv.appendChild(sub);
+    }
+  }
 }
 
 function renderRankingTable() {
@@ -139,13 +203,14 @@ function renderRankingTable() {
   const maxValue = ranked.length > 0 ? ranked[0][ind.key] : 0;
   
   const table = document.createElement('table');
-  table.className = 'min-w-full border border-gray-200 bg-white rounded-lg shadow-md overflow-hidden';
+  // SPでは横スクロールできるよう最小幅を確保＆改行禁止
+  table.className = 'min-w-[560px] sm:min-w-full border border-gray-200 bg-white rounded-lg shadow-md overflow-hidden whitespace-nowrap';
   const thead = document.createElement('thead');
   thead.innerHTML = `<tr class="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-    <th class="px-4 py-3 font-bold text-sm">順位</th>
-    <th class="px-4 py-3 font-bold text-sm text-left">国名</th>
-    <th class="px-4 py-3 font-bold text-sm text-right">${ind.label} (${ind.unit})</th>
-    <th class="px-4 py-3 font-bold text-sm">1位の国に対する割合</th>
+    <th class="px-2 sm:px-4 py-3 font-bold text-sm whitespace-nowrap w-[56px] sm:w-auto text-center">順位</th>
+    <th class="px-2 sm:px-4 py-3 font-bold text-sm text-left whitespace-nowrap w-[120px] sm:w-auto">国名</th>
+    <th class="px-2 sm:px-4 py-3 font-bold text-sm text-right whitespace-nowrap w-[110px] sm:w-auto">${ind.label} (${ind.unit})</th>
+    <th class="px-2 sm:px-4 py-3 font-bold text-sm whitespace-nowrap">1位の国に対する割合</th>
   </tr>`;
   table.appendChild(thead);
   const tbody = document.createElement('tbody');
@@ -175,19 +240,19 @@ function renderRankingTable() {
     const barColor = i === 0 ? 'bg-yellow-400' : i === 1 ? 'bg-gray-400' : i === 2 ? 'bg-orange-400' : 'bg-blue-400';
     
     tr.innerHTML = `
-      <td class="px-4 py-3 text-center">
+      <td class="px-2 sm:px-4 py-3 text-center whitespace-nowrap w-[56px] sm:w-auto">
         ${rankDisplay}
       </td>
-      <td class="px-4 py-3">
-        <div class="flex items-center gap-2">
-          ${c.flagImage ? `<img src='${c.flagImage}' alt='${c.name}' class='w-8 h-8 object-contain rounded shadow-sm'/>` : ''}
-          <span class="font-semibold">${c.name}</span>
+      <td class="px-2 sm:px-4 py-3 whitespace-nowrap w-[120px] sm:w-auto">
+        <div class="flex items-center gap-2 w-full">
+          ${c.flagImage ? `<img src='${c.flagImage}' alt='${c.name}' class='w-8 h-8 object-contain rounded shadow-sm flex-shrink-0'/>` : ''}
+          <span class="font-semibold truncate min-w-0">${c.name}</span>
         </div>
       </td>
-      <td class="px-4 py-3 text-right">
+      <td class="px-2 sm:px-4 py-3 text-right whitespace-nowrap w-[110px] sm:w-auto">
         <span class="font-bold text-lg text-blue-900">${c[ind.key].toLocaleString()}</span>
       </td>
-      <td class="px-4 py-3">
+      <td class="px-2 sm:px-4 py-3 whitespace-nowrap">
         <div class="w-full bg-gray-200 rounded-full h-6 overflow-hidden">
           <div class="${barColor} h-full rounded-full transition-all duration-500 flex items-center justify-end pr-2" style="width: ${barWidth}%">
             <span class="text-xs font-bold text-white">${barWidth.toFixed(0)}%</span>
@@ -198,7 +263,11 @@ function renderRankingTable() {
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
-  tableDiv.appendChild(table);
+  // 横スクロール用ラッパー（SPのみ有効）
+  const wrapper = document.createElement('div');
+  wrapper.className = 'overflow-x-auto sm:overflow-visible -mx-4 sm:mx-0';
+  wrapper.appendChild(table);
+  tableDiv.appendChild(wrapper);
 }
 
 // regionリストを取得
