@@ -5,6 +5,17 @@
   <title>主要国一覧 | GeoFlag</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media (max-width: 640px) {
+      #countryList > div span {
+        font-size: 0.75rem; /* text-xs */
+        line-height: 1rem;
+      }
+      #countryList > div {
+        padding: 0.75rem; /* p-3 */
+      }
+    }
+  </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
   <div class="container mx-auto py-8 px-4">
@@ -35,7 +46,7 @@
     
     <!-- 国一覧タブの内容 -->
     <div id="countryListTab" class="tab-content">
-      <div id="countryList" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      <div id="countryList" class="grid grid-cols-4 gap-4"></div>
     </div>
     
     <!-- 統計ランキングタブの内容 -->

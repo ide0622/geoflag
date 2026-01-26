@@ -204,13 +204,13 @@ function renderRankingTable() {
   
   const table = document.createElement('table');
   // SPでは横スクロールできるよう最小幅を確保＆改行禁止
-  table.className = 'min-w-[560px] sm:min-w-full border border-gray-200 bg-white rounded-lg shadow-md overflow-hidden whitespace-nowrap';
+  table.className = 'min-w-[400px] sm:min-w-full border border-gray-200 bg-white rounded-lg shadow-md overflow-hidden whitespace-nowrap';
   const thead = document.createElement('thead');
   thead.innerHTML = `<tr class="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-    <th class="px-2 sm:px-4 py-3 font-bold text-sm whitespace-nowrap w-[56px] sm:w-auto text-center">順位</th>
-    <th class="px-2 sm:px-4 py-3 font-bold text-sm text-left whitespace-nowrap w-[120px] sm:w-auto">国名</th>
-    <th class="px-2 sm:px-4 py-3 font-bold text-sm text-right whitespace-nowrap w-[110px] sm:w-auto">${ind.label} (${ind.unit})</th>
-    <th class="px-2 sm:px-4 py-3 font-bold text-sm whitespace-nowrap">1位の国に対する割合</th>
+    <th class="px-2 sm:px-4 py-3 font-bold text-sm whitespace-nowrap w-[40px] sm:w-auto text-center">順位</th>
+    <th class="px-2 sm:px-4 py-3 font-bold text-xs sm:text-sm text-left whitespace-nowrap w-[64px] sm:w-auto">国名</th>
+    <th class="px-2 sm:px-4 py-3 font-bold text-xs sm:text-sm text-right whitespace-nowrap w-[100px] sm:w-auto">${ind.label} (${ind.unit})</th>
+    <th class="px-2 sm:px-4 py-3 font-bold text-xs sm:text-sm whitespace-nowrap">1位の国に対する割合</th>
   </tr>`;
   table.appendChild(thead);
   const tbody = document.createElement('tbody');
@@ -240,17 +240,17 @@ function renderRankingTable() {
     const barColor = i === 0 ? 'bg-yellow-400' : i === 1 ? 'bg-gray-400' : i === 2 ? 'bg-orange-400' : 'bg-blue-400';
     
     tr.innerHTML = `
-      <td class="px-2 sm:px-4 py-3 text-center whitespace-nowrap w-[56px] sm:w-auto">
+      <td class="px-2 sm:px-4 py-3 text-center whitespace-nowrap w-[40px] sm:w-auto">
         ${rankDisplay}
       </td>
-      <td class="px-2 sm:px-4 py-3 whitespace-nowrap w-[120px] sm:w-auto">
-        <div class="flex items-center gap-2 w-full">
-          ${c.flagImage ? `<img src='${c.flagImage}' alt='${c.name}' class='w-8 h-8 object-contain rounded shadow-sm flex-shrink-0'/>` : ''}
-          <span class="font-semibold truncate min-w-0">${c.name}</span>
+      <td class="px-2 sm:px-4 py-3 whitespace-nowrap w-[64px] sm:w-auto">
+        <div class="flex items-center gap-1 w-full">
+          ${c.flagImage ? `<img src='${c.flagImage}' alt='${c.name}' class='w-6 h-4 object-contain rounded flex-shrink-0'/>` : ''}
+          <span class="text-xs sm:text-sm font-semibold truncate min-w-0">${c.name}</span>
         </div>
       </td>
-      <td class="px-2 sm:px-4 py-3 text-right whitespace-nowrap w-[110px] sm:w-auto">
-        <span class="font-bold text-lg text-blue-900">${c[ind.key].toLocaleString()}</span>
+      <td class="px-2 sm:px-4 py-3 text-right whitespace-nowrap w-[100px] sm:w-auto">
+        <span class="font-bold text-sm sm:text-lg text-blue-900">${c[ind.key].toLocaleString()}</span>
       </td>
       <td class="px-2 sm:px-4 py-3 whitespace-nowrap">
         <div class="w-full bg-gray-200 rounded-full h-6 overflow-hidden">
