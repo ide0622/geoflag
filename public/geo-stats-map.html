@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>地理統計マップ | GeoFlag</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    #geoStatsMap {
+      height: min(72vh, 780px);
+      min-height: 420px;
+      width: 100%;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    .legend-box {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.3;
+      color: #1f2937;
+    }
+    .legend-gradient {
+      width: 180px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #eff6ff 0%, #bfdbfe 25%, #60a5fa 50%, #2563eb 75%, #1e3a8a 100%);
+      border: 1px solid #93c5fd;
+      margin: 6px 0;
+    }
+    .leaflet-container {
+      background: #f8fafc;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h1 class="text-2xl md:text-3xl font-extrabold">地理統計マップ <span class="text-slate-500 text-lg md:text-xl font-semibold">Geo Stats Map</span></h1>
+      <button onclick="window.location.href='index.html'" class="px-4 py-2 bg-slate-600 text-white rounded-lg shadow hover:bg-slate-700 transition">トップに戻る</button>
+    </div>
+
+    <div class="bg-white rounded-xl shadow p-4 md:p-5 mb-4">
+      <label for="indicatorSelect" class="text-sm font-semibold text-slate-700">表示指標</label>
+      <div class="mt-2 flex flex-col md:flex-row md:items-center gap-3">
+        <select id="indicatorSelect" class="w-full md:w-[360px] px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </select>
+        <p id="metricStatus" class="text-sm text-slate-600"></p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <section class="lg:col-span-3 bg-white rounded-xl shadow p-3 md:p-4">
+        <div id="geoStatsMap" aria-label="世界地図"></div>
+      </section>
+
+      <aside class="bg-white rounded-xl shadow p-4">
+        <h2 class="text-lg font-bold mb-3">国の詳細</h2>
+        <div id="countryDetail" class="text-sm text-slate-600">
+          地図上の国をホバーまたはクリックしてください。
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="geo-stats-map.js"></script>
+</body>
+</html>

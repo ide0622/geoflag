@@ -273,6 +273,16 @@
         <span>High&Lowクイズ</span>
       </button>
 
+      <button id="geoStatsMapBtn" aria-label="地理統計マップ"
+        class="px-6 py-3 bg-sky-600 text-white text-xl rounded-full shadow hover:scale-105 transition flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 01.553-.894L9 2l6 3 5.447-2.724A1 1 0 0122 3.618v10.764a1 1 0 01-.553.894L16 18l-6 2z" />
+          <path d="M9 2v18" />
+          <path d="M15 5v13" />
+        </svg>
+        <span>地理統計マップ / Geo Stats Map</span>
+      </button>
+
     </div>
 
     <p class="relative z-10 text-gray-500 text-sm">
@@ -294,6 +304,14 @@
         if (startHighLow) {
           startHighLow.addEventListener('click', function() {
             window.location.href = 'highlow.html';
+          });
+        }
+
+        // 地理統計マップボタンで geo-stats-map へ遷移
+        var geoStatsMapBtn = document.getElementById('geoStatsMapBtn');
+        if (geoStatsMapBtn) {
+          geoStatsMapBtn.addEventListener('click', function() {
+            window.location.href = '/geo-stats-map';
           });
         }
       });

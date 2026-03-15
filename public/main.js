@@ -1936,14 +1936,8 @@ function showAllCountriesMapModal() {
         attribution: '&copy; OpenStreetMap contributors'
       }).addTo(window.leafletMapInstance);
       // === 赤道（緯度0°）を描画 ===
-      const equator = [
-        [-0.0001, -180],
-        [-0.0001, 180],
-        [0.0001, 180],
-        [0.0001, -180],
-        [-0.0001, -180]
-      ];
-      L.polyline(equator, {color: '#ff8888', weight: 3, opacity: 0.3, dashArray: '8,6'}).addTo(window.leafletMapInstance);
+      const equator = [[0, -180], [0, 180]];
+      L.polyline(equator, {color: '#ef4444', weight: 1, opacity: 0.22, interactive: false}).addTo(window.leafletMapInstance);
 
       // === 日付変更線（経度180°/−180°）を描画 ===
       const dateline = [

@@ -2,23 +2,23 @@
 // main.jsのcountries[]を利用して国名と国旗画像を表示
 // 指標リスト
 const indicators = [
-  { key: 'area', label: '面積', unit: '千km²' },
-  { key: 'population', label: '人口', unit: '万人' },
-  { key: 'life', label: '平均寿命', unit: '年' },
-  { key: 'gdp', label: 'GDP', unit: '百万US$' },
-  { key: 'medals', label: 'メダル数', unit: '' },
-  { key: 'passport', label: 'パスポート', unit: '' },
-  { key: 'tourists', label: '観光客数', unit: '' },
-  { key: 'rain', label: '降水量', unit: 'mm' },
-  { key: 'altitude', label: '平均標高', unit: 'm' },
-  { key: 'rice', label: '米の消費量', unit: 't' },
-  { key: 'internet', label: 'インターネット普及率', unit: '%' },
-  { key: 'wheat', label: '小麦の消費量', unit: 't' },
-  { key: 'temp', label: '平均気温', unit: '℃' },
-  { key: 'bigmac', label: 'ビッグマック指数', unit: 'US$' },
-  { key: 'sleep', label: '睡眠時間', unit: 'h' },
-  { key: 'heritage', label: '世界遺産数', unit: '件' },
-  { key: 'happiness', label: '幸福度', unit: '' }
+  { key: 'area', label: '面積', unit: '千km²', minValue: 0, maxValue: 20000 },
+  { key: 'population', label: '人口', unit: '万人', minValue: 0, maxValue: 2000 },
+  { key: 'life', label: '平均寿命', unit: '年', minValue: 0, maxValue: 130 },
+  { key: 'gdp', label: 'GDP', unit: '百万US$', minValue: 0, maxValue: 40000000 },
+  { key: 'medals', label: 'メダル数', unit: '', minValue: 0, maxValue: 10000 },
+  { key: 'passport', label: 'パスポート', unit: '', minValue: 0, maxValue: 250 },
+  { key: 'tourists', label: '観光客数', unit: '', minValue: 0, maxValue: 200000 },
+  { key: 'rain', label: '降水量', unit: 'mm', minValue: 0, maxValue: 15000 },
+  { key: 'altitude', label: '平均標高', unit: 'm', minValue: -500, maxValue: 9000 },
+  { key: 'rice', label: '米の消費量', unit: 't', minValue: 0, maxValue: 300000000 },
+  { key: 'internet', label: 'インターネット普及率', unit: '%', minValue: 0, maxValue: 100 },
+  { key: 'wheat', label: '小麦の消費量', unit: 't', minValue: 0, maxValue: 200000000 },
+  { key: 'temp', label: '平均気温', unit: '℃', minValue: -50, maxValue: 60 },
+  { key: 'bigmac', label: 'ビッグマック指数', unit: 'US$', minValue: 0, maxValue: 20 },
+  { key: 'sleep', label: '睡眠時間', unit: 'h', minValue: 0, maxValue: 1440 },
+  { key: 'heritage', label: '世界遺産数', unit: '件', minValue: 0, maxValue: 200 },
+  { key: 'happiness', label: '幸福度', unit: '', minValue: 0, maxValue: 10 }
 ];
 
 // モバイル(SP)用: 指標カテゴリ（階層表示）
@@ -34,12 +34,72 @@ const indicatorCategories = [
 // geodata.csvからすべての国データを読み込む
 let countries = [];
 
+function parseCsvLine(line) {
+  const cols = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      cols.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  cols.push(current);
+  return cols;
+}
+
+function toNumber(value) {
+  if (value === undefined || value === null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function sanitizeValue(indicatorKey, value) {
+  const indicator = indicators.find((item) => item.key === indicatorKey);
+  if (value === null || !indicator) return value;
+  if (typeof indicator.minValue === 'number' && value < indicator.minValue) return null;
+  if (typeof indicator.maxValue === 'number' && value > indicator.maxValue) return null;
+  return value;
+}
+
+function normalizeCsvCells(cells, expectedLength) {
+  const normalized = cells.slice();
+  while (normalized.length > expectedLength && normalized[normalized.length - 1] === '') {
+    normalized.pop();
+  }
+  if (
+    normalized.length === expectedLength - 1 &&
+    toNumber(normalized[15]) !== null &&
+    toNumber(normalized[15]) >= 200 &&
+    toNumber(normalized[16]) !== null &&
+    toNumber(normalized[16]) >= 40 &&
+    toNumber(normalized[16]) <= 95
+  ) {
+    normalized.splice(15, 0, '');
+  }
+  while (normalized.length < expectedLength) {
+    normalized.push('');
+  }
+  return normalized.slice(0, expectedLength);
+}
+
 function parseCSVCountries() {
   return fetch('geodata.csv')
     .then(res => res.text())
     .then(csv => {
-      const lines = csv.split('\n');
-      const header = lines[0].split(',');
+      const lines = csv.split(/\r?\n/).filter(line => line.trim());
+      const header = parseCsvLine(lines[0]);
+      const expectedLength = header.length;
       
       // ヘッダーインデックスを取得
       const nameIdx = header.indexOf('国名');
@@ -71,7 +131,7 @@ function parseCSVCountries() {
       // CSVデータを解析
       for (let i = 1; i < lines.length; ++i) {
         if (!lines[i].trim()) continue;
-        const cols = lines[i].split(',');
+        const cols = normalizeCsvCells(parseCsvLine(lines[i]), expectedLength);
         if (cols.length < 10) continue;
         
         const country = {
@@ -81,28 +141,43 @@ function parseCSVCountries() {
           region: cols[regionIdx] || '',
           subregion: cols[subregionIdx] || '',
           capital: cols[capitalIdx] || '',
-          area: parseFloat(cols[areaIdx]) || 0,
-          population: parseFloat(cols[populationIdx]) || 0,
-          lat: parseFloat(cols[latIdx]) || 0,
-          lng: parseFloat(cols[lngIdx]) || 0
+          area: sanitizeValue('area', toNumber(cols[areaIdx])) || 0,
+          population: sanitizeValue('population', toNumber(cols[populationIdx])) || 0,
+          lat: toNumber(cols[latIdx]) || 0,
+          lng: toNumber(cols[lngIdx]) || 0
         };
         
         // 統計データを追加
-        if (!isNaN(parseFloat(cols[lifeIdx]))) country.life = parseFloat(cols[lifeIdx]);
-        if (!isNaN(parseFloat(cols[gdpIdx]))) country.gdp = Math.round(parseFloat(cols[gdpIdx]) / 1000);
-        if (!isNaN(parseFloat(cols[medalsIdx]))) country.medals = parseFloat(cols[medalsIdx]);
-        if (!isNaN(parseFloat(cols[passportIdx]))) country.passport = parseFloat(cols[passportIdx]);
-        if (!isNaN(parseFloat(cols[touristsIdx]))) country.tourists = parseFloat(cols[touristsIdx]);
-        if (!isNaN(parseFloat(cols[rainIdx]))) country.rain = parseFloat(cols[rainIdx]);
-        if (!isNaN(parseFloat(cols[altitudeIdx]))) country.altitude = parseFloat(cols[altitudeIdx]);
-        if (!isNaN(parseFloat(cols[riceIdx]))) country.rice = parseFloat(cols[riceIdx]);
-        if (!isNaN(parseFloat(cols[internetIdx]))) country.internet = parseFloat(cols[internetIdx]);
-        if (!isNaN(parseFloat(cols[wheatIdx]))) country.wheat = parseFloat(cols[wheatIdx]);
-        if (!isNaN(parseFloat(cols[tempIdx]))) country.temp = parseFloat(cols[tempIdx]);
-        if (!isNaN(parseFloat(cols[bigmacIdx]))) country.bigmac = parseFloat(cols[bigmacIdx]);
-        if (!isNaN(parseFloat(cols[sleepIdx]))) country.sleep = parseFloat(cols[sleepIdx]);
-        if (!isNaN(parseFloat(cols[heritageIdx]))) country.heritage = parseFloat(cols[heritageIdx]);
-        if (!isNaN(parseFloat(cols[happinessIdx]))) country.happiness = parseFloat(cols[happinessIdx]);
+        const life = sanitizeValue('life', toNumber(cols[lifeIdx]));
+        if (life !== null) country.life = life;
+        const gdp = sanitizeValue('gdp', toNumber(cols[gdpIdx]));
+        if (gdp !== null) country.gdp = Math.round(gdp / 1000);
+        const medals = sanitizeValue('medals', toNumber(cols[medalsIdx]));
+        if (medals !== null) country.medals = medals;
+        const passport = sanitizeValue('passport', toNumber(cols[passportIdx]));
+        if (passport !== null) country.passport = passport;
+        const tourists = sanitizeValue('tourists', toNumber(cols[touristsIdx]));
+        if (tourists !== null) country.tourists = tourists;
+        const rain = sanitizeValue('rain', toNumber(cols[rainIdx]));
+        if (rain !== null) country.rain = rain;
+        const altitude = sanitizeValue('altitude', toNumber(cols[altitudeIdx]));
+        if (altitude !== null) country.altitude = altitude;
+        const rice = sanitizeValue('rice', toNumber(cols[riceIdx]));
+        if (rice !== null) country.rice = rice;
+        const internet = sanitizeValue('internet', toNumber(cols[internetIdx]));
+        if (internet !== null) country.internet = internet;
+        const wheat = sanitizeValue('wheat', toNumber(cols[wheatIdx]));
+        if (wheat !== null) country.wheat = wheat;
+        const temp = sanitizeValue('temp', toNumber(cols[tempIdx]));
+        if (temp !== null) country.temp = temp;
+        const bigmac = sanitizeValue('bigmac', toNumber(cols[bigmacIdx]));
+        if (bigmac !== null) country.bigmac = bigmac;
+        const sleep = sanitizeValue('sleep', toNumber(cols[sleepIdx]));
+        if (sleep !== null) country.sleep = sleep;
+        const heritage = sanitizeValue('heritage', toNumber(cols[heritageIdx]));
+        if (heritage !== null) country.heritage = heritage;
+        const happiness = sanitizeValue('happiness', toNumber(cols[happinessIdx]));
+        if (happiness !== null) country.happiness = happiness;
         
         if (country.name) {
           countries.push(country);
@@ -378,6 +453,12 @@ function showCountryStats(country) {
       L.tileLayer('https://tile.openstreetmap.jp/{z}/{x}/{y}.png', {
         maxZoom: 18,
         attribution: '© OpenStreetMap contributors, osm.jp'
+      }).addTo(map);
+      L.polyline([[0, -180], [0, 180]], {
+        color: '#ef4444',
+        weight: 1,
+        opacity: 0.22,
+        interactive: false
       }).addTo(map);
       L.marker([country.lat, country.lng]).addTo(map);
     } else {

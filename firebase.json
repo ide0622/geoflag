@@ -9,6 +9,14 @@
     ],
     "rewrites": [
       {
+        "source": "/geo-stats-map",
+        "destination": "/geo-stats-map.html"
+      },
+      {
+        "source": "/geo-stats-map/**",
+        "destination": "/geo-stats-map.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
