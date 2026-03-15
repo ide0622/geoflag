@@ -40,7 +40,7 @@
   const coreDetailKeys = ['life_expectancy', 'population', 'area', 'gdp', 'internet_penetration'];
 
   const state = {
-    metricKey: 'life_expectancy',
+    metricKey: FLAG_TERRAIN_KEY,
     indicators: [],
     map: null,
     geoLayer: null,
@@ -49,7 +49,8 @@
     domain: { min: null, max: null },
     countryByA2: new Map(),
     countryByA3: new Map(),
-    selectedCountry: null
+    selectedCountry: null,
+    highlightedLayer: null
   };
 
   function getIndicatorDefByKey(key) {
@@ -232,11 +233,16 @@
 
   function getCountryForFeature(feature) {
     const props = feature.properties || {};
-    const a2 = getFeatureProp(props, ['ISO3166-1-Alpha-2', 'ISO_A2', 'iso_a2', 'iso2', 'ISO2']).toUpperCase();
-    const a3 = getFeatureProp(props, ['ISO3166-1-Alpha-3', 'ISO_A3', 'iso_a3', 'iso3', 'ISO3']).toUpperCase();
+    const a2 = getFeatureProp(props, [
+      'ISO3166-1-Alpha-2', 'ISO_A2', 'iso_a2', 'iso2', 'ISO2', 'ISO_A2_EH', 'iso_a2_eh', 'WB_A2'
+    ]).toUpperCase();
+    const a3 = getFeatureProp(props, [
+      'ISO3166-1-Alpha-3', 'ISO_A3', 'iso_a3', 'iso3', 'ISO3', 'ISO_A3_EH', 'iso_a3_eh', 'WB_A3', 'ADM0_A3', 'BRK_A3'
+    ]).toUpperCase();
 
-    if (a2 && state.countryByA2.has(a2)) return state.countryByA2.get(a2);
-    if (a3 && state.countryByA3.has(a3)) return state.countryByA3.get(a3);
+    if (a2 && a2 !== '-99' && state.countryByA2.has(a2)) return state.countryByA2.get(a2);
+    if (a3 && a3 !== '-99' && state.countryByA3.has(a3)) return state.countryByA3.get(a3);
+
     return null;
   }
 
@@ -423,6 +429,7 @@
 
   function refreshMapStyles() {
     if (!state.geoLayer) return;
+    state.highlightedLayer = null; // 指標切り替え時はハイライトをリセット
 
     state.geoLayer.eachLayer((layer) => {
       const feature = layer.feature;
@@ -508,6 +515,7 @@
 
     state.map.fitBounds(state.geoLayer.getBounds(), { padding: [10, 10] });
     initLegend();
+    initMapSearch();
   }
 
   async function fetchGeoJson() {
@@ -621,6 +629,130 @@
     });
   }
 
+  // ===== 地図内検索 =====
+  function findLayerByRecord(record) {
+    if (!state.geoLayer || !record) return null;
+    let found = null;
+    state.geoLayer.eachLayer((layer) => {
+      if (!found && getCountryForFeature(layer.feature) === record) found = layer;
+    });
+    return found;
+  }
+
+  function clearMapHighlight() {
+    if (!state.highlightedLayer) return;
+    const layer = state.highlightedLayer;
+    state.highlightedLayer = null;
+    const path = layer?.getElement?.() || layer?._path;
+    if (path) path.classList.remove('map-highlight-path');
+    layer.setStyle(styleFeature(layer.feature));
+    if (isFlagTerrainMode()) {
+      applyFlagPatternToLayer(layer, getCountryForFeature(layer.feature));
+    }
+  }
+
+  function highlightAndFocusCountry(record) {
+    clearMapHighlight();
+    const layer = findLayerByRecord(record);
+    if (!layer) return;
+    state.highlightedLayer = layer;
+    layer.setStyle({ color: '#f97316', weight: 3.5, fillOpacity: isFlagTerrainMode() ? 0.95 : 0.72 });
+    if (isFlagTerrainMode()) applyFlagPatternToLayer(layer, record);
+    const path = layer?.getElement?.() || layer?._path;
+    if (path) path.classList.add('map-highlight-path');
+    try { state.map.fitBounds(layer.getBounds(), { padding: [50, 50], maxZoom: 5, animate: true }); } catch(e) {}
+    state.selectedCountry = record;
+    updateDetailPanel(record);
+  }
+
+  function initMapSearch() {
+    const ctrl = L.control({ position: 'topright' });
+    ctrl.onAdd = function() {
+      const wrap = L.DomUtil.create('div', 'map-search-control');
+      L.DomEvent.disableClickPropagation(wrap);
+      L.DomEvent.disableScrollPropagation(wrap);
+
+      const inputRow = L.DomUtil.create('div', 'map-search-input-row', wrap);
+      inputRow.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input type="text" placeholder="国を検索…" autocomplete="off" spellcheck="false" />
+        <button class="map-search-clear" style="display:none" aria-label="クリア">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      `;
+      const ul = L.DomUtil.create('ul', 'map-search-dropdown', wrap);
+      ul.style.display = 'none';
+
+      const input = inputRow.querySelector('input');
+      const clearBtn = inputRow.querySelector('.map-search-clear');
+      let activeIdx = -1;
+
+      function getMatches(q) {
+        const lower = q.trim().toLowerCase();
+        if (!lower) return [];
+        const out = [];
+        const seen = new Set();
+        for (const rec of state.countryByA2.values()) {
+          if (!seen.has(rec) && rec.country.toLowerCase().includes(lower)) { out.push(rec); seen.add(rec); }
+        }
+        return out.sort((a, b) => {
+          const as = a.country.toLowerCase().startsWith(lower) ? 0 : 1;
+          const bs = b.country.toLowerCase().startsWith(lower) ? 0 : 1;
+          return as - bs || a.country.localeCompare(b.country, 'ja');
+        }).slice(0, 8);
+      }
+
+      function renderDropdown(matches) {
+        ul.innerHTML = ''; activeIdx = -1;
+        if (!matches.length) { ul.style.display = 'none'; return; }
+        matches.forEach((rec) => {
+          const li = document.createElement('li');
+          const fUrl = getFlagImageUrl(rec);
+          li.innerHTML = fUrl
+            ? `<img src="${fUrl}" alt="${rec.country}" /><span>${rec.country}</span>`
+            : `<span class="flag-ph"></span><span>${rec.country}</span>`;
+          li.addEventListener('mousedown', (e) => { e.preventDefault(); select(rec); });
+          ul.appendChild(li);
+        });
+        ul.style.display = 'block';
+      }
+
+      function select(rec) {
+        input.value = ''; clearBtn.style.display = 'none'; ul.style.display = 'none';
+        highlightAndFocusCountry(rec);
+      }
+
+      function setActive(idx) {
+        const items = ul.querySelectorAll('li');
+        activeIdx = Math.max(-1, Math.min(idx, items.length - 1));
+        items.forEach((el, i) => el.classList.toggle('active', i === activeIdx));
+      }
+
+      input.addEventListener('input', () => {
+        clearBtn.style.display = input.value ? 'flex' : 'none';
+        renderDropdown(getMatches(input.value));
+      });
+      input.addEventListener('keydown', (e) => {
+        if (!ul.querySelectorAll('li').length) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIdx + 1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIdx - 1); }
+        else if (e.key === 'Enter' && activeIdx >= 0) { const m = getMatches(input.value); if (m[activeIdx]) select(m[activeIdx]); }
+        else if (e.key === 'Escape') { ul.style.display = 'none'; input.blur(); }
+      });
+      input.addEventListener('blur', () => setTimeout(() => { ul.style.display = 'none'; }, 150));
+      input.addEventListener('focus', () => { if (input.value) renderDropdown(getMatches(input.value)); });
+      clearBtn.addEventListener('click', () => {
+        input.value = ''; clearBtn.style.display = 'none'; ul.style.display = 'none';
+        clearMapHighlight(); input.focus();
+      });
+
+      return wrap;
+    };
+    ctrl.addTo(state.map);
+  }
+
   async function init() {
     try {
       await parseCountriesFromCsv();
@@ -634,6 +766,16 @@
       countryDetail.innerHTML = '<span class="text-rose-700">データの読み込みに失敗しました。</span>';
     }
   }
+
+  // 親ページ(country_list)からの指標切り替えメッセージを受信
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'setMapMetric' && typeof event.data.key === 'string') {
+      state.metricKey = event.data.key;
+      computeDomain();
+      refreshMapStyles();
+      if (indicatorSelect) indicatorSelect.value = event.data.key;
+    }
+  });
 
   init();
 })();

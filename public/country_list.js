@@ -475,6 +475,231 @@ function showCountryStats(country) {
 
 
 
+// 統計マップ用: geo-stats-map.jsのINDICATOR_DEFSと対応するキー/ラベル
+const mapIndicators = [
+  { key: 'life_expectancy',    label: '平均寿命' },
+  { key: 'population',         label: '人口' },
+  { key: 'area',               label: '面積' },
+  { key: 'gdp',                label: 'GDP' },
+  { key: 'internet_penetration', label: 'インターネット普及率' },
+  { key: 'medals',             label: 'メダル数' },
+  { key: 'passport',           label: 'パスポート指数' },
+  { key: 'tourists',           label: '観光客数' },
+  { key: 'precipitation',      label: '降水量' },
+  { key: 'average_elevation',  label: '平均標高' },
+  { key: 'rice_consumption',   label: '米の消費量' },
+  { key: 'wheat_consumption',  label: '小麦の消費量' },
+  { key: 'average_temperature', label: '平均気温' },
+  { key: 'bigmac_index',       label: 'ビッグマック指数' },
+  { key: 'sleep_time',         label: '睡眠時間' },
+  { key: 'world_heritage',     label: '世界遺産数' },
+  { key: 'happiness',          label: '幸福度' },
+  { key: 'borders',            label: '国境数' },
+  { key: 'languages',          label: '言語数' },
+  { key: 'timezones',          label: 'タイムゾーン数' },
+  { key: 'fertility_rate',     label: '合計特殊出生率' },
+  { key: 'median_age',         label: '年齢中央値' },
+  { key: 'literacy_rate',      label: '識字率' }
+];
+
+const mapIndicatorCategories = [
+  { key: 'geo',  label: '地理',      items: ['area', 'average_elevation', 'average_temperature', 'precipitation', 'borders', 'timezones'] },
+  { key: 'soc',  label: '人口・社会', items: ['population', 'life_expectancy', 'internet_penetration', 'sleep_time', 'happiness', 'fertility_rate', 'median_age', 'literacy_rate', 'languages'] },
+  { key: 'eco',  label: '経済',      items: ['gdp', 'bigmac_index'] },
+  { key: 'tour', label: '観光・遺産', items: ['tourists', 'world_heritage'] },
+  { key: 'food', label: '食',        items: ['rice_consumption', 'wheat_consumption'] },
+  { key: 'other', label: 'その他',   items: ['medals', 'passport'] }
+];
+
+const FLAG_TERRAIN_KEY_MAP = 'flag_terrain';
+let currentMapIndicator = FLAG_TERRAIN_KEY_MAP;
+let currentMapIndicatorCategory = null;
+
+function sendMapMetric(key) {
+  currentMapIndicator = key;
+  const frame = document.getElementById('statsMapFrame');
+  if (frame && frame.contentWindow) {
+    frame.contentWindow.postMessage({ type: 'setMapMetric', key }, '*');
+  }
+}
+
+function renderMapIndicatorButtons() {
+  const container = document.getElementById('mapIndicatorButtons');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
+
+  // 国旗地形マップ 特別ボタン（常に先頭表示）
+  const flagBtn = document.createElement('button');
+  flagBtn.textContent = '🌏 国旗地形マップ';
+  const isFlagActive = currentMapIndicator === FLAG_TERRAIN_KEY_MAP;
+  flagBtn.className = isFlagActive
+    ? 'px-4 py-2 m-1 rounded-lg bg-emerald-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-emerald-600'
+    : 'px-4 py-2 m-1 rounded-lg bg-emerald-100 text-emerald-800 font-semibold shadow-sm transition-all duration-200 hover:bg-emerald-200';
+  flagBtn.onclick = () => { sendMapMetric(FLAG_TERRAIN_KEY_MAP); renderMapIndicatorButtons(); };
+  container.appendChild(flagBtn);
+
+  if (!isMobile) {
+    // PC: フラットなボタン群
+    const wrap = document.createElement('div');
+    wrap.className = 'flex flex-wrap';
+    mapIndicators.forEach(ind => {
+      const btn = document.createElement('button');
+      btn.textContent = ind.label;
+      const isActive = currentMapIndicator === ind.key;
+      btn.className = isActive
+        ? 'px-4 py-2 m-1 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600'
+        : 'px-4 py-2 m-1 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200';
+      btn.onclick = () => { sendMapMetric(ind.key); renderMapIndicatorButtons(); };
+      wrap.appendChild(btn);
+    });
+    container.appendChild(wrap);
+    return;
+  }
+
+  // SP: カテゴリ → サブ指標の二層表示
+  const categoryBar = document.createElement('div');
+  categoryBar.className = '-mx-4 px-4 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-1 mt-1';
+  mapIndicatorCategories.forEach(cat => {
+    const isOpen = currentMapIndicatorCategory === cat.key;
+    const btn = document.createElement('button');
+    btn.textContent = cat.label;
+    btn.className = (isOpen ? 'bg-blue-500 text-white ' : 'bg-blue-100 text-blue-800 ') +
+      'px-4 py-2 rounded-lg font-semibold shadow-sm transition-all duration-200 flex-shrink-0 snap-start';
+    btn.onclick = () => {
+      currentMapIndicatorCategory = (currentMapIndicatorCategory === cat.key ? null : cat.key);
+      renderMapIndicatorButtons();
+    };
+    categoryBar.appendChild(btn);
+  });
+  container.appendChild(categoryBar);
+
+  if (currentMapIndicatorCategory) {
+    const cat = mapIndicatorCategories.find(c => c.key === currentMapIndicatorCategory);
+    if (cat) {
+      const sub = document.createElement('div');
+      sub.className = 'mt-2 flex flex-wrap gap-2';
+      cat.items.forEach(key => {
+        const ind = mapIndicators.find(i => i.key === key);
+        if (!ind) return;
+        const isActive = currentMapIndicator === ind.key;
+        const b = document.createElement('button');
+        b.textContent = ind.label;
+        b.className = isActive
+          ? 'px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold shadow transition hover:bg-blue-700'
+          : 'px-3 py-2 rounded-lg bg-blue-50 text-blue-800 text-sm font-semibold shadow-sm transition hover:bg-blue-100';
+        b.onclick = () => { sendMapMetric(ind.key); renderMapIndicatorButtons(); };
+        sub.appendChild(b);
+      });
+      container.appendChild(sub);
+    }
+  }
+}
+
+// ===== 国検索機能 =====
+function initCountrySearch() {
+  const input = document.getElementById('countrySearchInput');
+  const dropdown = document.getElementById('searchDropdown');
+  const clearBtn = document.getElementById('searchClearBtn');
+  if (!input || !dropdown) return;
+
+  let activeIdx = -1;
+
+  function getMatches(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return countries
+      .filter(c => c.name.toLowerCase().includes(q))
+      .sort((a, b) => {
+        // 前方一致を優先
+        const aStarts = a.name.toLowerCase().startsWith(q) ? 0 : 1;
+        const bStarts = b.name.toLowerCase().startsWith(q) ? 0 : 1;
+        return aStarts - bStarts || a.name.localeCompare(b.name, 'ja');
+      })
+      .slice(0, 10);
+  }
+
+  function renderDropdown(matches) {
+    dropdown.innerHTML = '';
+    activeIdx = -1;
+    if (!matches.length) {
+      dropdown.classList.add('hidden');
+      return;
+    }
+    matches.forEach((c, i) => {
+      const li = document.createElement('li');
+      li.dataset.idx = i;
+      li.innerHTML = `
+        ${c.flagImage ? `<img src="${c.flagImage}" alt="${c.name}" />` : '<span style="width:1.8rem;height:1.2rem;background:#e5e7eb;display:inline-block;border-radius:2px;flex-shrink:0;"></span>'}
+        <span>${c.name}</span>
+        <span style="margin-left:auto;font-size:0.8rem;color:#9ca3af;">${c.region || ''}</span>
+      `;
+      li.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // blurより先に処理
+        selectCountry(c);
+      });
+      dropdown.appendChild(li);
+    });
+    dropdown.classList.remove('hidden');
+  }
+
+  function selectCountry(c) {
+    input.value = '';
+    clearBtn.classList.add('hidden');
+    dropdown.classList.add('hidden');
+    showCountryStats(c);
+  }
+
+  function highlightItem(idx, items) {
+    items.forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+    });
+  }
+
+  input.addEventListener('input', () => {
+    const q = input.value;
+    clearBtn.classList.toggle('hidden', !q);
+    renderDropdown(getMatches(q));
+  });
+
+  input.addEventListener('keydown', (e) => {
+    const items = [...dropdown.querySelectorAll('li')];
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, items.length - 1);
+      highlightItem(activeIdx, items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      highlightItem(activeIdx, items);
+    } else if (e.key === 'Enter' && activeIdx >= 0) {
+      const matches = getMatches(input.value);
+      if (matches[activeIdx]) selectCountry(matches[activeIdx]);
+    } else if (e.key === 'Escape') {
+      dropdown.classList.add('hidden');
+      input.blur();
+    }
+  });
+
+  input.addEventListener('blur', () => {
+    // クリック処理後に閉じる（mousedownで先にselectしているため少し遅延）
+    setTimeout(() => dropdown.classList.add('hidden'), 150);
+  });
+
+  input.addEventListener('focus', () => {
+    if (input.value) renderDropdown(getMatches(input.value));
+  });
+
+  clearBtn.addEventListener('click', () => {
+    input.value = '';
+    clearBtn.classList.add('hidden');
+    dropdown.classList.add('hidden');
+    input.focus();
+  });
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   // CSVから国データを読み込む
   parseCSVCountries().then(() => {
@@ -483,6 +708,7 @@ window.addEventListener('DOMContentLoaded', () => {
     currentIndicator = indicators[0].key;
     renderRankingTable();
     renderCountryList();
+    initCountrySearch(); // 国検索初期化（データロード後）
   }).catch(err => console.error('Error loading countries:', err));
   
   // タブ切り替え機能
@@ -528,5 +754,7 @@ window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('statsMapFrame').src = 'geo-stats-map.html?embedded=1';
       statsMapLoaded = true;
     }
+    // 指標ボタンを描画（タブを開くたびに再描画してアクティブ状態を同期）
+    renderMapIndicatorButtons();
   });
 });

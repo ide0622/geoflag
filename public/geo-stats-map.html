@@ -36,10 +36,56 @@
     .leaflet-container {
       background: #f8fafc;
     }
-    /* 埋め追みモード: country_listのifframe内で表示する際のヘッダー非表示 */
+    /* 地図内検索コントロール */
+    .map-search-control { min-width: 200px; max-width: 255px; }
+    .map-search-input-row {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.97);
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+      padding: 7px 10px;
+      border: 1.5px solid #e2e8f0;
+      transition: border-color 0.15s;
+    }
+    .map-search-input-row:focus-within { border-color: #38bdf8; }
+    .map-search-input-row svg { width:15px; height:15px; color:#94a3b8; flex-shrink:0; }
+    .map-search-input-row input {
+      border:none; outline:none; font-size:13px;
+      background:transparent; flex:1; min-width:0; color:#1e293b;
+    }
+    .map-search-input-row input::placeholder { color:#94a3b8; }
+    .map-search-clear {
+      background:none; border:none; cursor:pointer;
+      color:#94a3b8; display:flex; align-items:center; padding:0; flex-shrink:0;
+    }
+    .map-search-clear:hover { color:#475569; }
+    .map-search-clear svg { width:14px; height:14px; }
+    .map-search-dropdown {
+      margin-top:4px; list-style:none; padding:0;
+      background:rgba(255,255,255,0.98);
+      border:1px solid #e2e8f0; border-radius:8px;
+      box-shadow:0 4px 16px rgba(0,0,0,0.13);
+      max-height:230px; overflow-y:auto;
+    }
+    .map-search-dropdown li {
+      display:flex; align-items:center; gap:8px;
+      padding:7px 10px; cursor:pointer; font-size:13px;
+      border-bottom:1px solid #f1f5f9; color:#1e293b;
+    }
+    .map-search-dropdown li:last-child { border-bottom:none; }
+    .map-search-dropdown li:hover, .map-search-dropdown li.active { background:#eff6ff; }
+    .map-search-dropdown li img { width:24px; height:16px; object-fit:contain; border-radius:2px; flex-shrink:0; }
+    .map-search-dropdown .flag-ph { width:24px; height:16px; background:#e5e7eb; border-radius:2px; flex-shrink:0; display:inline-block; }
+    /* ハイライトパルスアニメーション */
+    @keyframes map-highlight-pulse {
+      0%,100% { stroke-opacity:1; } 50% { stroke-opacity:0.4; }
+    }
+    .map-highlight-path { animation: map-highlight-pulse 1.2s ease-in-out 3; }
+    /* 埋め込みモード: country_listのiframe内で表示する際の調整 */
     html.embedded #pageHeader { display: none !important; }
-    html.embedded body { background: #f8fafc !important; }
-    html.embedded body > div { padding-top: 0.5rem !important; }
+    html.embedded #indicatorSelectBox { display: none !important; }
+    html.embedded body { background: transparent !important; }
+    html.embedded body > div { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-900">
@@ -49,7 +95,7 @@
       <button onclick="window.location.href='index.html'" class="px-4 py-2 bg-slate-600 text-white rounded-lg shadow hover:bg-slate-700 transition">トップに戻る</button>
     </div>
 
-    <div class="bg-white rounded-xl shadow p-4 md:p-5 mb-4">
+    <div id="indicatorSelectBox" class="bg-white rounded-xl shadow p-4 md:p-5 mb-4">
       <label for="indicatorSelect" class="text-sm font-semibold text-slate-700">表示指標</label>
       <div class="mt-2 flex flex-col md:flex-row md:items-center gap-3">
         <select id="indicatorSelect" class="w-full md:w-[360px] px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500">

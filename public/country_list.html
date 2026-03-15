@@ -6,9 +6,37 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* 検索ドロップダウン */
+    #searchDropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: #fff;
+      border: 1px solid #d1d5db;
+      border-top: none;
+      border-radius: 0 0 0.75rem 0.75rem;
+      max-height: 320px;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    #searchDropdown li {
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    #searchDropdown li:last-child { border-bottom: none; }
+    #searchDropdown li:hover, #searchDropdown li.active { background: #eff6ff; }
+    #searchDropdown li img { width: 1.8rem; height: 1.2rem; object-fit: contain; border-radius: 2px; flex-shrink: 0; }
+    #searchWrapper { position: relative; }
     #statsMapFrame {
       width: 100%;
-      height: max(620px, calc(100vh - 220px));
+      height: max(520px, calc(100vh - 340px));
       border: none;
       border-radius: 0.75rem;
       display: block;
@@ -26,8 +54,23 @@
 </head>
 <body class="bg-gray-100 text-gray-900">
   <div class="container mx-auto py-8 px-4">
-    <h1 class="text-3xl font-bold mb-6">統計データ一覧</h1>
-    
+    <h1 class="text-3xl font-bold mb-4">統計データ一覧</h1>
+
+    <!-- 国検索バー（常時表示） -->
+    <div id="searchWrapper" class="mb-5">
+      <div class="flex items-center gap-2 bg-white rounded-xl shadow px-4 py-3 border border-gray-200 focus-within:ring-2 focus-within:ring-blue-400 transition">
+        <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z"/>
+        </svg>
+        <input id="countrySearchInput" type="text" placeholder="国名で検索…" autocomplete="off" spellcheck="false"
+          class="flex-1 outline-none text-base bg-transparent placeholder-gray-400" />
+        <button id="searchClearBtn" class="hidden text-gray-400 hover:text-gray-600" aria-label="クリア">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <ul id="searchDropdown" class="hidden"></ul>
+    </div>
+
     <!-- タブナビゲーション -->
     <div class="mb-6 border-b border-gray-300">
       <div class="flex gap-2">
@@ -75,6 +118,16 @@
 
     <!-- 統計マップタブの内容 -->
     <div id="statsMapTab" class="tab-content hidden">
+      <!-- 指標選択UI（統計ランキングと同じスタイル） -->
+      <div class="mb-4">
+        <h2 class="text-lg font-bold text-gray-700 mb-3 flex items-center">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+          表示指標選択
+        </h2>
+        <div id="mapIndicatorButtons" class="flex flex-wrap gap-2"></div>
+      </div>
       <iframe id="statsMapFrame" src="" title="統計マップ" allowfullscreen></iframe>
     </div>
     
