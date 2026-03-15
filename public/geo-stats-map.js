@@ -4,6 +4,10 @@
   const metricStatus = document.getElementById('metricStatus');
 
   const MISSING_COLOR = '#9ca3af';
+  const FLAG_TERRAIN_KEY = 'flag_terrain';
+  const FLAG_TERRAIN_LABEL = '国旗地形マップ';
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const GRADIENT_STOPS = ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'];
 
   const INDICATOR_DEFS = [
@@ -52,8 +56,87 @@
     return INDICATOR_DEFS.find((i) => i.key === key) || null;
   }
 
+  function isFlagTerrainMode() {
+    return state.metricKey === FLAG_TERRAIN_KEY;
+  }
+
   function getActiveIndicatorByKey(key) {
+    if (key === FLAG_TERRAIN_KEY) {
+      return { key: FLAG_TERRAIN_KEY, label: FLAG_TERRAIN_LABEL, unit: '' };
+    }
     return state.indicators.find((i) => i.key === key) || getIndicatorDefByKey(key);
+  }
+
+  function getFlagImageUrl(country) {
+    const a2 = (country?.iso_a2 || '').toLowerCase();
+    if (!a2 || a2.length !== 2) return null;
+    return `https://flagcdn.com/w160/${a2}.png`;
+  }
+
+  function ensurePatternDefsContainer() {
+    if (!state.map) return null;
+    const svg = state.map.getPanes()?.overlayPane?.querySelector('svg');
+    if (!svg) return null;
+
+    let defs = svg.querySelector('defs[data-role="flag-pattern-defs"]');
+    if (!defs) {
+      defs = document.createElementNS(SVG_NS, 'defs');
+      defs.setAttribute('data-role', 'flag-pattern-defs');
+      svg.insertBefore(defs, svg.firstChild);
+    }
+    return defs;
+  }
+
+  function ensureFlagPatternId(country) {
+    const defs = ensurePatternDefsContainer();
+    if (!defs) return null;
+    const a2 = (country?.iso_a2 || '').toLowerCase();
+    if (!a2 || a2.length !== 2) return null;
+    const flagUrl = getFlagImageUrl(country);
+    if (!flagUrl) return null;
+
+    const patternId = `flag-pattern-${a2}`;
+    if (defs.querySelector(`#${patternId}`)) {
+      return patternId;
+    }
+
+    const pattern = document.createElementNS(SVG_NS, 'pattern');
+    pattern.setAttribute('id', patternId);
+    pattern.setAttribute('patternUnits', 'objectBoundingBox');
+    pattern.setAttribute('patternContentUnits', 'objectBoundingBox');
+    pattern.setAttribute('width', '1');
+    pattern.setAttribute('height', '1');
+
+    const image = document.createElementNS(SVG_NS, 'image');
+    image.setAttribute('x', '0');
+    image.setAttribute('y', '0');
+    image.setAttribute('width', '1');
+    image.setAttribute('height', '1');
+    image.setAttribute('preserveAspectRatio', 'none');
+    image.setAttributeNS(XLINK_NS, 'href', flagUrl);
+    image.setAttribute('href', flagUrl);
+
+    pattern.appendChild(image);
+    defs.appendChild(pattern);
+    return patternId;
+  }
+
+  function applyFlagPatternToLayer(layer, country) {
+    const path = layer?.getElement?.() || layer?._path;
+    if (!path) return;
+
+    if (!country) {
+      path.setAttribute('fill', MISSING_COLOR);
+      return;
+    }
+
+    const patternId = ensureFlagPatternId(country);
+    if (patternId) {
+      path.setAttribute('fill', `url(#${patternId})`);
+      path.setAttribute('fill-opacity', '0.95');
+    } else {
+      path.setAttribute('fill', MISSING_COLOR);
+    }
   }
 
   function splitCsvLine(line) {
@@ -208,6 +291,12 @@
   }
 
   function computeDomain() {
+    if (isFlagTerrainMode()) {
+      state.domain = { min: null, max: null, rawMin: null, rawMax: null };
+      setMetricStatus('国旗地形モード: 各国ポリゴンを国旗で塗り分けています。', false);
+      return;
+    }
+
     const values = [];
     for (const c of state.countryByA2.values()) {
       const v = c.metrics[state.metricKey];
@@ -238,6 +327,7 @@
   }
 
   function getFillColor(country) {
+    if (isFlagTerrainMode()) return '#e5e7eb';
     if (!country) return MISSING_COLOR;
     const v = country.metrics[state.metricKey];
     if (v === null || v === undefined || Number.isNaN(v)) return MISSING_COLOR;
@@ -260,6 +350,9 @@
     const ind = getActiveIndicatorByKey(state.metricKey);
     const countryName = country?.country || countryNameFromFeature(feature);
     const flag = country?.flag || '🏳️';
+    if (isFlagTerrainMode()) {
+      return `<div style="font-weight:700;">${flag} ${countryName}</div><div>${FLAG_TERRAIN_LABEL}</div>`;
+    }
     const valueText = country ? formatValue(country.metrics[state.metricKey], state.metricKey) : 'N/A';
     return `<div style="font-weight:700;">${flag} ${countryName}</div><div>${ind?.label || state.metricKey}: ${valueText}</div>`;
   }
@@ -271,7 +364,9 @@
     }
 
     const ind = getActiveIndicatorByKey(state.metricKey);
-    const selectedValue = formatValue(country.metrics[state.metricKey], state.metricKey);
+    const selectedValue = isFlagTerrainMode()
+      ? '国旗地形モード'
+      : formatValue(country.metrics[state.metricKey], state.metricKey);
 
     const rows = coreDetailKeys.map((k) => {
       const m = getActiveIndicatorByKey(k);
@@ -292,6 +387,16 @@
   function updateLegend() {
     if (!state.legendEl) return;
     const ind = getActiveIndicatorByKey(state.metricKey);
+
+    if (isFlagTerrainMode()) {
+      state.legendEl.innerHTML = `
+        <div><strong>${FLAG_TERRAIN_LABEL}</strong></div>
+        <div style="margin-top:4px; color:#334155;">各国の国旗画像を地形ポリゴンへ投影表示</div>
+        <div style="margin-top:6px; color:#6b7280;">欠損/未対応: グレー</div>
+      `;
+      return;
+    }
+
     const { min, max, rawMin, rawMax } = state.domain;
 
     state.legendEl.innerHTML = `
@@ -323,6 +428,9 @@
       const feature = layer.feature;
       const country = getCountryForFeature(feature);
       layer.setStyle(styleFeature(feature));
+      if (isFlagTerrainMode()) {
+        applyFlagPatternToLayer(layer, country);
+      }
       if (layer.getTooltip()) {
         layer.setTooltipContent(buildTooltipHtml(feature, country));
       }
@@ -369,6 +477,9 @@
         layer.on('mouseover', () => {
           layer.setStyle({ weight: 1.6, color: '#0f172a' });
           const hoveredCountry = getCountryForFeature(feature);
+          if (isFlagTerrainMode()) {
+            applyFlagPatternToLayer(layer, hoveredCountry);
+          }
           if (hoveredCountry) {
             updateDetailPanel(hoveredCountry);
           }
@@ -376,6 +487,10 @@
 
         layer.on('mouseout', () => {
           layer.setStyle(styleFeature(feature));
+          if (isFlagTerrainMode()) {
+            const outCountry = getCountryForFeature(feature);
+            applyFlagPatternToLayer(layer, outCountry);
+          }
           if (state.selectedCountry) {
             updateDetailPanel(state.selectedCountry);
           } else {
@@ -489,10 +604,15 @@
   }
 
   function setupIndicatorSelect() {
-    indicatorSelect.innerHTML = state.indicators.map((ind) => {
+    const flagTerrainOption = `<option value="${FLAG_TERRAIN_KEY}" ${state.metricKey === FLAG_TERRAIN_KEY ? 'selected' : ''}>${FLAG_TERRAIN_LABEL} (${FLAG_TERRAIN_KEY})</option>`;
+
+    indicatorSelect.innerHTML = [
+      flagTerrainOption,
+      ...state.indicators.map((ind) => {
       const selected = ind.key === state.metricKey ? 'selected' : '';
       return `<option value="${ind.key}" ${selected}>${ind.label} (${ind.key})</option>`;
-    }).join('');
+    })
+    ].join('');
 
     indicatorSelect.addEventListener('change', (e) => {
       state.metricKey = e.target.value;
