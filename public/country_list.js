@@ -488,28 +488,45 @@ window.addEventListener('DOMContentLoaded', () => {
   // タブ切り替え機能
   const tabCountryList = document.getElementById('tabCountryList');
   const tabRanking = document.getElementById('tabRanking');
+  const tabStatsMap = document.getElementById('tabStatsMap');
   const countryListTab = document.getElementById('countryListTab');
   const rankingTab = document.getElementById('rankingTab');
-  
-  tabCountryList.addEventListener('click', () => {
-    // 国一覧タブをアクティブに
-    tabCountryList.classList.add('border-blue-500', 'text-blue-600');
-    tabCountryList.classList.remove('border-transparent', 'text-gray-500');
-    tabRanking.classList.remove('border-blue-500', 'text-blue-600');
-    tabRanking.classList.add('border-transparent', 'text-gray-500');
-    
-    countryListTab.classList.remove('hidden');
-    rankingTab.classList.add('hidden');
-  });
-  
-  tabRanking.addEventListener('click', () => {
-    // 統計ランキングタブをアクティブに
-    tabRanking.classList.add('border-blue-500', 'text-blue-600');
-    tabRanking.classList.remove('border-transparent', 'text-gray-500');
-    tabCountryList.classList.remove('border-blue-500', 'text-blue-600');
-    tabCountryList.classList.add('border-transparent', 'text-gray-500');
-    
-    rankingTab.classList.remove('hidden');
-    countryListTab.classList.add('hidden');
+  const statsMapTab = document.getElementById('statsMapTab');
+  const regionSection = document.getElementById('regionSection');
+  let statsMapLoaded = false;
+
+  const ALL_TABS = [tabCountryList, tabRanking, tabStatsMap];
+  const ALL_CONTENTS = [countryListTab, rankingTab, statsMapTab];
+
+  function activateTab(activeTab) {
+    ALL_TABS.forEach(t => {
+      t.classList.remove('border-blue-500', 'text-blue-600');
+      t.classList.add('border-transparent', 'text-gray-500');
+    });
+    activeTab.classList.add('border-blue-500', 'text-blue-600');
+    activeTab.classList.remove('border-transparent', 'text-gray-500');
+
+    const idx = ALL_TABS.indexOf(activeTab);
+    ALL_CONTENTS.forEach((c, i) => {
+      if (i === idx) c.classList.remove('hidden');
+      else c.classList.add('hidden');
+    });
+
+    // 地域フィルタは統計マップタブでは非表示
+    if (regionSection) {
+      if (activeTab === tabStatsMap) regionSection.classList.add('hidden');
+      else regionSection.classList.remove('hidden');
+    }
+  }
+
+  tabCountryList.addEventListener('click', () => activateTab(tabCountryList));
+  tabRanking.addEventListener('click', () => activateTab(tabRanking));
+  tabStatsMap.addEventListener('click', () => {
+    activateTab(tabStatsMap);
+    // 統計マップは初回クリック時にiframeをロード（遅延ロード）
+    if (!statsMapLoaded) {
+      document.getElementById('statsMapFrame').src = 'geo-stats-map.html?embedded=1';
+      statsMapLoaded = true;
+    }
   });
 });

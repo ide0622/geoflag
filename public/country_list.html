@@ -2,10 +2,17 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>主要国一覧 | GeoFlag</title>
+  <title>統計データ一覧 | GeoFlag</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    #statsMapFrame {
+      width: 100%;
+      height: max(620px, calc(100vh - 220px));
+      border: none;
+      border-radius: 0.75rem;
+      display: block;
+    }
     @media (max-width: 640px) {
       #countryList > div span {
         font-size: 0.75rem; /* text-xs */
@@ -19,7 +26,7 @@
 </head>
 <body class="bg-gray-100 text-gray-900">
   <div class="container mx-auto py-8 px-4">
-    <h1 class="text-3xl font-bold mb-6">主要国一覧</h1>
+    <h1 class="text-3xl font-bold mb-6">統計データ一覧</h1>
     
     <!-- タブナビゲーション -->
     <div class="mb-6 border-b border-gray-300">
@@ -30,11 +37,14 @@
         <button id="tabRanking" class="px-6 py-3 font-semibold text-lg border-b-4 border-transparent text-gray-500 hover:text-gray-700">
           統計ランキング
         </button>
+        <button id="tabStatsMap" class="px-6 py-3 font-semibold text-lg border-b-4 border-transparent text-gray-500 hover:text-gray-700">
+          統計マップ
+        </button>
       </div>
     </div>
     
-    <!-- 地域フィルタ（両方のタブで共通） -->
-    <div class="mb-6">
+    <!-- 地域フィルタ（国一覧・ランキングタブで共通） -->
+    <div id="regionSection" class="mb-6">
       <h2 class="text-lg font-bold text-gray-700 mb-3 flex items-center">
         <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -61,6 +71,11 @@
         <div id="indicatorButtons" class="flex flex-wrap gap-2"></div>
       </div>
       <div id="rankingTable" class="mb-4"></div>
+    </div>
+
+    <!-- 統計マップタブの内容 -->
+    <div id="statsMapTab" class="tab-content hidden">
+      <iframe id="statsMapFrame" src="" title="統計マップ" allowfullscreen></iframe>
     </div>
     
     <button onclick="window.location.href='index.html'" class="fixed top-6 right-8 px-6 py-2 bg-gray-500 text-white rounded shadow hover:bg-gray-600 transition z-50">トップに戻る</button>
