@@ -22,7 +22,7 @@
     average_elevation: ['#fafaf9', '#d6d3d1', '#a8a29e', '#57534e', '#292524'],
     rice_consumption: ['#fefce8', '#fde68a', '#f59e0b', '#b45309', '#78350f'],
     wheat_consumption: ['#fffbeb', '#fde68a', '#f59e0b', '#d97706', '#78350f'],
-    average_temperature: ['#ecfeff', '#67e8f9', '#f59e0b', '#f97316', '#b91c1c'],
+    average_temperature: ['#ef4444', '#facc15', '#22c55e', '#67e8f9', '#2563eb'],
     bigmac_index: ['#fef2f2', '#fecaca', '#f87171', '#dc2626', '#7f1d1d'],
     sleep_time: ['#eef2ff', '#c7d2fe', '#818cf8', '#4f46e5', '#312e81'],
     world_heritage: ['#f5f3ff', '#ddd6fe', '#c084fc', '#9333ea', '#581c87'],
@@ -372,40 +372,7 @@
 
     const tRaw = (v - min) / (max - min);
     const t = Math.pow(Math.max(0, Math.min(1, tRaw)), 0.85);
-
-    // 平均気温は寒冷側を青系に寄せ、全体をより滑らかにグラデーション表示
-    if (state.metricKey === 'average_temperature') {
-      if (t <= 0.5) {
-        const coldT = t / 0.5;
-        return colorMix(coldT, ['#1e3a8a', '#2563eb', '#38bdf8']);
-      }
-      const warmT = (t - 0.5) / 0.5;
-      return colorMix(warmT, ['#fef3c7', '#f59e0b', '#f97316', '#dc2626', '#7f1d1d']);
-    }
-
     return colorMix(t, stops);
-  }
-
-  function getFillOpacity(country) {
-    if (isFlagTerrainMode()) return 0.9;
-    if (!country) return 0.9;
-
-    if (state.metricKey !== 'average_temperature') {
-      return 0.9;
-    }
-
-    const v = country.metrics[state.metricKey];
-    if (v === null || v === undefined || Number.isNaN(v)) return 0.9;
-
-    const { min, max } = state.domain;
-    if (min === null || max === null || max === min) return 0.9;
-
-    const tRaw = Math.max(0, Math.min(1, (v - min) / (max - min)));
-
-    // 暑い側は現状維持、寒いほど青の透明度を下げる（=不透明に近づける）
-    if (tRaw > 0.5) return 0.9;
-    const coldStrength = 1 - (tRaw / 0.5); // 0.5→0, 最寒冷→1
-    return 0.35 + (coldStrength * 0.55);
   }
 
   function countryNameFromFeature(feature) {
@@ -491,7 +458,7 @@
       color: '#64748b',
       weight: 0.7,
       fillColor: getFillColor(country),
-      fillOpacity: getFillOpacity(country)
+      fillOpacity: 0.9
     };
   }
 
