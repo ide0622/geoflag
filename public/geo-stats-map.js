@@ -5,10 +5,35 @@
 
   const MISSING_COLOR = '#9ca3af';
   const FLAG_TERRAIN_KEY = 'flag_terrain';
-  const FLAG_TERRAIN_LABEL = '国旗地形マップ';
+  const FLAG_TERRAIN_LABEL = '国旗マップ';
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const GRADIENT_STOPS = ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'];
+  const METRIC_GRADIENT_STOPS = {
+    life_expectancy: ['#ecfdf5', '#bbf7d0', '#4ade80', '#16a34a', '#14532d'],
+    population: ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
+    area: ['#f0fdf4', '#dcfce7', '#86efac', '#22c55e', '#14532d'],
+    gdp: ['#fff7ed', '#fed7aa', '#fb923c', '#ea580c', '#7c2d12'],
+    internet_penetration: ['#ecfeff', '#a5f3fc', '#22d3ee', '#0891b2', '#164e63'],
+    medals: ['#fefce8', '#fef08a', '#facc15', '#ca8a04', '#713f12'],
+    passport: ['#f5f3ff', '#ddd6fe', '#a78bfa', '#7c3aed', '#4c1d95'],
+    tourists: ['#fdf4ff', '#f5d0fe', '#e879f9', '#c026d3', '#701a75'],
+    precipitation: ['#ecfeff', '#bae6fd', '#38bdf8', '#0284c7', '#0c4a6e'],
+    average_elevation: ['#fafaf9', '#d6d3d1', '#a8a29e', '#57534e', '#292524'],
+    rice_consumption: ['#fefce8', '#fde68a', '#f59e0b', '#b45309', '#78350f'],
+    wheat_consumption: ['#fffbeb', '#fde68a', '#f59e0b', '#d97706', '#78350f'],
+    average_temperature: ['#ecfeff', '#67e8f9', '#f59e0b', '#f97316', '#b91c1c'],
+    bigmac_index: ['#fef2f2', '#fecaca', '#f87171', '#dc2626', '#7f1d1d'],
+    sleep_time: ['#eef2ff', '#c7d2fe', '#818cf8', '#4f46e5', '#312e81'],
+    world_heritage: ['#f5f3ff', '#ddd6fe', '#c084fc', '#9333ea', '#581c87'],
+    happiness: ['#fff7ed', '#ffedd5', '#fdba74', '#f97316', '#9a3412'],
+    borders: ['#f1f5f9', '#cbd5e1', '#94a3b8', '#475569', '#1e293b'],
+    languages: ['#faf5ff', '#e9d5ff', '#c084fc', '#a21caf', '#581c87'],
+    timezones: ['#f0f9ff', '#bae6fd', '#38bdf8', '#0ea5e9', '#0c4a6e'],
+    fertility_rate: ['#fdf2f8', '#fbcfe8', '#f472b6', '#db2777', '#831843'],
+    median_age: ['#f8fafc', '#e2e8f0', '#94a3b8', '#475569', '#0f172a'],
+    literacy_rate: ['#ecfdf3', '#bbf7d0', '#4ade80', '#16a34a', '#14532d']
+  };
 
   const INDICATOR_DEFS = [
     { key: 'life_expectancy', label: '平均寿命', unit: '年', headers: ['life_expectancy', '平均寿命'], minValue: 0, maxValue: 130 },
@@ -36,8 +61,6 @@
     { key: 'median_age', label: '年齢中央値', unit: '歳', headers: ['median_age', '年齢中央値'], minValue: 0, maxValue: 70 },
     { key: 'literacy_rate', label: '識字率', unit: '%', headers: ['literacy_rate', '識字率'], minValue: 0, maxValue: 100 }
   ];
-
-  const coreDetailKeys = ['life_expectancy', 'population', 'area', 'gdp', 'internet_penetration'];
 
   const state = {
     metricKey: FLAG_TERRAIN_KEY,
@@ -246,16 +269,20 @@
     return null;
   }
 
-  function colorMix(t) {
+  function getGradientStops(metricKey) {
+    return METRIC_GRADIENT_STOPS[metricKey] || GRADIENT_STOPS;
+  }
+
+  function colorMix(t, stops = GRADIENT_STOPS) {
     const clamped = Math.max(0, Math.min(1, t));
-    const n = GRADIENT_STOPS.length - 1;
+    const n = stops.length - 1;
     const scaled = clamped * n;
     const leftIdx = Math.floor(scaled);
     const rightIdx = Math.min(n, leftIdx + 1);
     const localT = scaled - leftIdx;
 
-    const left = GRADIENT_STOPS[leftIdx].replace('#', '');
-    const right = GRADIENT_STOPS[rightIdx].replace('#', '');
+    const left = stops[leftIdx].replace('#', '');
+    const right = stops[rightIdx].replace('#', '');
 
     const lr = parseInt(left.slice(0, 2), 16);
     const lg = parseInt(left.slice(2, 4), 16);
@@ -299,7 +326,7 @@
   function computeDomain() {
     if (isFlagTerrainMode()) {
       state.domain = { min: null, max: null, rawMin: null, rawMax: null };
-      setMetricStatus('国旗地形モード: 各国ポリゴンを国旗で塗り分けています。', false);
+      setMetricStatus('国旗モード: 各国ポリゴンを国旗で塗り分けています。', false);
       return;
     }
 
@@ -339,12 +366,46 @@
     if (v === null || v === undefined || Number.isNaN(v)) return MISSING_COLOR;
 
     const { min, max } = state.domain;
+    const stops = getGradientStops(state.metricKey);
     if (min === null || max === null) return MISSING_COLOR;
-    if (max === min) return colorMix(1);
+    if (max === min) return colorMix(1, stops);
 
     const tRaw = (v - min) / (max - min);
     const t = Math.pow(Math.max(0, Math.min(1, tRaw)), 0.85);
-    return colorMix(t);
+
+    // 平均気温は寒冷側を青系に寄せ、全体をより滑らかにグラデーション表示
+    if (state.metricKey === 'average_temperature') {
+      if (t <= 0.5) {
+        const coldT = t / 0.5;
+        return colorMix(coldT, ['#1e3a8a', '#2563eb', '#38bdf8']);
+      }
+      const warmT = (t - 0.5) / 0.5;
+      return colorMix(warmT, ['#fef3c7', '#f59e0b', '#f97316', '#dc2626', '#7f1d1d']);
+    }
+
+    return colorMix(t, stops);
+  }
+
+  function getFillOpacity(country) {
+    if (isFlagTerrainMode()) return 0.9;
+    if (!country) return 0.9;
+
+    if (state.metricKey !== 'average_temperature') {
+      return 0.9;
+    }
+
+    const v = country.metrics[state.metricKey];
+    if (v === null || v === undefined || Number.isNaN(v)) return 0.9;
+
+    const { min, max } = state.domain;
+    if (min === null || max === null || max === min) return 0.9;
+
+    const tRaw = Math.max(0, Math.min(1, (v - min) / (max - min)));
+
+    // 暑い側は現状維持、寒いほど青の透明度を下げる（=不透明に近づける）
+    if (tRaw > 0.5) return 0.9;
+    const coldStrength = 1 - (tRaw / 0.5); // 0.5→0, 最寒冷→1
+    return 0.35 + (coldStrength * 0.55);
   }
 
   function countryNameFromFeature(feature) {
@@ -357,7 +418,7 @@
     const countryName = country?.country || countryNameFromFeature(feature);
     const flag = country?.flag || '🏳️';
     if (isFlagTerrainMode()) {
-      return `<div style="font-weight:700;">${flag} ${countryName}</div><div>${FLAG_TERRAIN_LABEL}</div>`;
+      return `<div style="font-weight:700;">${flag} ${countryName}</div>`;
     }
     const valueText = country ? formatValue(country.metrics[state.metricKey], state.metricKey) : 'N/A';
     return `<div style="font-weight:700;">${flag} ${countryName}</div><div>${ind?.label || state.metricKey}: ${valueText}</div>`;
@@ -371,10 +432,14 @@
 
     const ind = getActiveIndicatorByKey(state.metricKey);
     const selectedValue = isFlagTerrainMode()
-      ? '国旗地形モード'
+      ? '国旗モード'
       : formatValue(country.metrics[state.metricKey], state.metricKey);
+    const selectedMetricHtml = isFlagTerrainMode()
+      ? `<div class="text-xl font-extrabold text-sky-700">${selectedValue}</div>`
+      : `<div class="text-xl font-extrabold text-sky-700">${ind?.label || state.metricKey}: ${selectedValue}</div>`;
 
-    const rows = coreDetailKeys.map((k) => {
+    const rows = state.indicators.map((metric) => {
+      const k = metric.key;
       const m = getActiveIndicatorByKey(k);
       if (!m) return '';
       return `<li class="flex items-center justify-between gap-3 py-1 border-b border-slate-100"><span class="text-slate-500">${m.label}</span><span class="font-semibold text-slate-800">${formatValue(country.metrics[k], k)}</span></li>`;
@@ -384,9 +449,9 @@
       <div class="mb-3">
         <div class="text-2xl font-bold">${country.flag || '🏳️'} ${country.country || '不明'}</div>
         <div class="mt-2 text-sm text-slate-500">選択中の指標</div>
-        <div class="text-xl font-extrabold text-sky-700">${ind?.label || state.metricKey}: ${selectedValue}</div>
+        ${selectedMetricHtml}
       </div>
-      <ul class="text-sm">${rows}</ul>
+      <ul class="text-sm max-h-[52vh] overflow-y-auto pr-1">${rows}</ul>
     `;
   }
 
@@ -397,23 +462,26 @@
     if (isFlagTerrainMode()) {
       state.legendEl.innerHTML = `
         <div><strong>${FLAG_TERRAIN_LABEL}</strong></div>
-        <div style="margin-top:4px; color:#334155;">各国の国旗画像を地形ポリゴンへ投影表示</div>
-        <div style="margin-top:6px; color:#6b7280;">欠損/未対応: グレー</div>
       `;
       return;
     }
 
     const { min, max, rawMin, rawMax } = state.domain;
 
+    const legendStops = getGradientStops(state.metricKey);
+    const percentStep = legendStops.length > 1 ? 100 / (legendStops.length - 1) : 100;
+    const gradientCss = legendStops
+      .map((color, idx) => `${color} ${(idx * percentStep).toFixed(1)}%`)
+      .join(', ');
+
     state.legendEl.innerHTML = `
       <div><strong>${ind?.label || state.metricKey}</strong></div>
-      <div class="legend-gradient"></div>
+      <div class="legend-gradient" style="background: linear-gradient(90deg, ${gradientCss}); border-color: ${legendStops[1] || legendStops[0]};"></div>
       <div style="display:flex; justify-content:space-between; gap:8px;">
         <span>低: ${formatValue(min, state.metricKey)}</span>
         <span>高: ${formatValue(max, state.metricKey)}</span>
       </div>
       <div style="margin-top:4px; color:#6b7280;">全体範囲: ${formatValue(rawMin, state.metricKey)} 〜 ${formatValue(rawMax, state.metricKey)}</div>
-      <div style="margin-top:6px; color:#6b7280;">欠損値: グレー</div>
     `;
   }
 
@@ -423,7 +491,7 @@
       color: '#64748b',
       weight: 0.7,
       fillColor: getFillColor(country),
-      fillOpacity: 0.9
+      fillOpacity: getFillOpacity(country)
     };
   }
 
@@ -606,7 +674,7 @@
       throw new Error('geodata.csv から利用可能な統計指標を検出できませんでした。');
     }
 
-    if (!state.indicators.some((ind) => ind.key === state.metricKey)) {
+    if (state.metricKey !== FLAG_TERRAIN_KEY && !state.indicators.some((ind) => ind.key === state.metricKey)) {
       state.metricKey = state.indicators[0].key;
     }
   }

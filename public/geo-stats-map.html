@@ -86,6 +86,12 @@
     html.embedded #indicatorSelectBox { display: none !important; }
     html.embedded body { background: transparent !important; }
     html.embedded body > div { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+    @media (max-width: 640px) {
+      html.embedded #geoStatsMap {
+        width: 120%;
+        margin-left: -10%;
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-900">
