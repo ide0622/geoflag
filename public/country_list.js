@@ -4,16 +4,20 @@
 const indicators = [
   { key: 'area', label: '面積', unit: '千km²', minValue: 0, maxValue: 20000 },
   { key: 'population', label: '人口', unit: '万人', minValue: 0, maxValue: 2000 },
+  { key: 'population_density', label: '人口密度', unit: '人/km²', minValue: 0, maxValue: 50000 },
   { key: 'life', label: '平均寿命', unit: '年', minValue: 0, maxValue: 130 },
   { key: 'gdp', label: 'GDP', unit: '百万US$', minValue: 0, maxValue: 40000000 },
+  { key: 'gdp_per_capita', label: '一人当たりのGDP', unit: 'US$/人', minValue: 0, maxValue: 300000 },
   { key: 'medals', label: 'メダル数', unit: '', minValue: 0, maxValue: 10000 },
   { key: 'passport', label: 'パスポート', unit: '', minValue: 0, maxValue: 250 },
   { key: 'tourists', label: '観光客数', unit: '', minValue: 0, maxValue: 200000 },
   { key: 'rain', label: '降水量', unit: 'mm', minValue: 0, maxValue: 15000 },
   { key: 'altitude', label: '平均標高', unit: 'm', minValue: -500, maxValue: 9000 },
   { key: 'rice', label: '米の消費量', unit: 't', minValue: 0, maxValue: 300000000 },
+  { key: 'rice_per_capita', label: '一人当たりの米の消費量', unit: 'kg/人', minValue: 0, maxValue: 1000 },
   { key: 'internet', label: 'インターネット普及率', unit: '%', minValue: 0, maxValue: 100 },
   { key: 'wheat', label: '小麦の消費量', unit: 't', minValue: 0, maxValue: 200000000 },
+  { key: 'wheat_per_capita', label: '一人当たりの小麦消費量', unit: 'kg/人', minValue: 0, maxValue: 1000 },
   { key: 'temp', label: '平均気温', unit: '℃', minValue: -50, maxValue: 60 },
   { key: 'bigmac', label: 'ビッグマック指数', unit: 'US$', minValue: 0, maxValue: 20 },
   { key: 'sleep', label: '睡眠時間', unit: 'h', minValue: 0, maxValue: 1440 },
@@ -23,12 +27,11 @@ const indicators = [
 
 // モバイル(SP)用: 指標カテゴリ（階層表示）
 const indicatorCategories = [
-  { key: 'geo', label: '地理', items: ['area', 'altitude', 'temp', 'rain'] },
-  { key: 'soc', label: '人口・社会', items: ['population', 'life', 'internet', 'sleep', 'happiness'] },
-  { key: 'eco', label: '経済', items: ['gdp', 'bigmac'] },
-  { key: 'tour', label: '観光・遺産', items: ['tourists', 'heritage'] },
-  { key: 'food', label: '食', items: ['rice', 'wheat'] },
-  { key: 'other', label: 'その他', items: ['medals', 'passport'] }
+  { key: 'basic', label: '基本指標', items: ['life', 'population', 'area', 'gdp', 'population_density', 'gdp_per_capita'] },
+  { key: 'society', label: '社会・生活', items: ['internet', 'sleep', 'happiness', 'passport'] },
+  { key: 'climate_geo', label: '気候・地理', items: ['temp', 'rain', 'altitude'] },
+  { key: 'food', label: '食料', items: ['rice', 'wheat', 'rice_per_capita', 'wheat_per_capita'] },
+  { key: 'culture_tourism', label: '文化・観光', items: ['tourists', 'heritage', 'medals', 'bigmac'] }
 ];
 
 // geodata.csvからすべての国データを読み込む
@@ -178,6 +181,31 @@ function parseCSVCountries() {
         if (heritage !== null) country.heritage = heritage;
         const happiness = sanitizeValue('happiness', toNumber(cols[happinessIdx]));
         if (happiness !== null) country.happiness = happiness;
+
+        // 派生指標（四則演算）
+        if (country.population > 0 && country.area > 0) {
+          // 人口密度 = (万人 ÷ 千km²) × 10
+          const density = sanitizeValue('population_density', (country.population / country.area) * 10);
+          if (density !== null) country.population_density = density;
+        }
+
+        if (country.population > 0 && gdp !== null) {
+          // 一人当たりGDP = (百万US$ × 100) ÷ 万人
+          const gdpPerCapita = sanitizeValue('gdp_per_capita', (gdp * 100) / country.population);
+          if (gdpPerCapita !== null) country.gdp_per_capita = gdpPerCapita;
+        }
+
+        if (country.population > 0 && rice !== null) {
+          // 一人当たり米消費量(kg/人) = t ÷ 万人 ÷ 10
+          const ricePerCapita = sanitizeValue('rice_per_capita', rice / country.population / 10);
+          if (ricePerCapita !== null) country.rice_per_capita = ricePerCapita;
+        }
+
+        if (country.population > 0 && wheat !== null) {
+          // 一人当たり小麦消費量(kg/人) = t ÷ 万人 ÷ 10
+          const wheatPerCapita = sanitizeValue('wheat_per_capita', wheat / country.population / 10);
+          if (wheatPerCapita !== null) country.wheat_per_capita = wheatPerCapita;
+        }
         
         if (country.name) {
           countries.push(country);
@@ -190,77 +218,85 @@ function parseCSVCountries() {
 let currentIndicator = null;
 let currentIndicatorCategory = null; // SP用: 展開中カテゴリ
 
+const rankingCategoryColorClasses = {
+  basic: {
+    active: 'bg-blue-600 text-white hover:bg-blue-700',
+    inactive: 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+  },
+  society: {
+    active: 'bg-fuchsia-600 text-white hover:bg-fuchsia-700',
+    inactive: 'bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200'
+  },
+  climate_geo: {
+    active: 'bg-cyan-600 text-white hover:bg-cyan-700',
+    inactive: 'bg-cyan-100 text-cyan-800 hover:bg-cyan-200'
+  },
+  food: {
+    active: 'bg-emerald-600 text-white hover:bg-emerald-700',
+    inactive: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+  },
+  culture_tourism: {
+    active: 'bg-amber-600 text-white hover:bg-amber-700',
+    inactive: 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+  }
+};
+
+function syncRankingCategoryByIndicator(indicatorKey) {
+  const found = indicatorCategories.find((cat) => cat.items.includes(indicatorKey));
+  if (found) currentIndicatorCategory = found.key;
+}
+
 function renderIndicatorButtons() {
   const indicatorDiv = document.getElementById('indicatorButtons');
   if (!indicatorDiv) return;
   indicatorDiv.innerHTML = '';
 
-  const isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches;
-
-  if (!isMobile) {
-    // PC: 従来のフラットなボタン群
-    const wrap = document.createElement('div');
-    wrap.className = 'flex flex-wrap gap-2';
-    indicators.forEach(ind => {
-      const btn = document.createElement('button');
-      btn.textContent = ind.label;
-      const isActive = currentIndicator === ind.key;
-      btn.className = isActive
-        ? 'px-4 py-2 m-1 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600'
-        : 'px-4 py-2 m-1 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200';
-      btn.onclick = () => {
-        currentIndicator = ind.key;
-        renderIndicatorButtons();
-        renderRankingTable();
-      };
-      wrap.appendChild(btn);
-    });
-    indicatorDiv.appendChild(wrap);
-    return;
+  if (!currentIndicatorCategory) {
+    currentIndicatorCategory = indicatorCategories[0]?.key || null;
   }
 
-  // SP: カテゴリ → サブ指標の二層表示
+  // 1階層目: カテゴリ
   const categoryBar = document.createElement('div');
-  categoryBar.className = '-mx-4 px-4 flex gap-2 overflow-x-auto snap-x snap-mandatory pb-1';
+  categoryBar.className = 'flex flex-wrap gap-2 mb-2';
   indicatorCategories.forEach(cat => {
     const isOpen = currentIndicatorCategory === cat.key;
+    const catColor = rankingCategoryColorClasses[cat.key] || rankingCategoryColorClasses.basic;
     const btn = document.createElement('button');
     btn.textContent = cat.label;
-    btn.className = (isOpen ? 'bg-blue-500 text-white ' : 'bg-blue-100 text-blue-800 ') +
-      'px-4 py-2 rounded-lg font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200 flex-shrink-0 snap-start';
+    btn.className = `px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isOpen ? 'shadow-md' : 'shadow-sm'} ${isOpen ? catColor.active : catColor.inactive}`;
     btn.onclick = () => {
-      currentIndicatorCategory = (currentIndicatorCategory === cat.key ? null : cat.key);
+      currentIndicatorCategory = cat.key;
+      const firstKey = cat.items[0];
+      if (firstKey) currentIndicator = firstKey;
       renderIndicatorButtons();
+      renderRankingTable();
     };
     categoryBar.appendChild(btn);
   });
   indicatorDiv.appendChild(categoryBar);
 
-  // サブ指標（選択中のカテゴリのみ展開）
-  if (currentIndicatorCategory) {
-    const cat = indicatorCategories.find(c => c.key === currentIndicatorCategory);
-    if (cat) {
-      const sub = document.createElement('div');
-      sub.className = 'mt-2 flex flex-wrap gap-2';
-      cat.items.forEach(key => {
-        const ind = indicators.find(i => i.key === key);
-        if (!ind) return;
-        const isActive = currentIndicator === ind.key;
-        const b = document.createElement('button');
-        b.textContent = ind.label;
-        b.className = isActive
-          ? 'px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold shadow transition hover:bg-blue-700'
-          : 'px-3 py-2 rounded-lg bg-blue-50 text-blue-800 text-sm font-semibold shadow-sm transition hover:bg-blue-100';
-        b.onclick = () => {
-          currentIndicator = ind.key;
-          renderIndicatorButtons();
-          renderRankingTable();
-        };
-        sub.appendChild(b);
-      });
-      indicatorDiv.appendChild(sub);
-    }
-  }
+  // 2階層目: 指標（1行表示）
+  const activeCategory = indicatorCategories.find(c => c.key === currentIndicatorCategory);
+  if (!activeCategory) return;
+  const activeColor = rankingCategoryColorClasses[activeCategory.key] || rankingCategoryColorClasses.basic;
+  const sub = document.createElement('div');
+  sub.className = 'w-full flex flex-nowrap gap-2 overflow-x-auto pb-1';
+  activeCategory.items.forEach(key => {
+    const ind = indicators.find(i => i.key === key);
+    if (!ind) return;
+    const isActive = currentIndicator === ind.key;
+    const b = document.createElement('button');
+    b.textContent = ind.label;
+    b.className = `px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${isActive ? 'shadow-md' : 'shadow-sm'} ${isActive ? activeColor.active : activeColor.inactive}`;
+    b.onclick = () => {
+      currentIndicator = ind.key;
+      syncRankingCategoryByIndicator(ind.key);
+      renderIndicatorButtons();
+      renderRankingTable();
+    };
+    sub.appendChild(b);
+  });
+  indicatorDiv.appendChild(sub);
 }
 
 function renderRankingTable() {
@@ -410,6 +446,9 @@ function renderCountryList() {
 
 // 国の統計情報を表示するダイアログ
 function showCountryStats(country) {
+  const trendsGeo = (country.code || '').toUpperCase();
+  const trendsUrl = trendsGeo ? `https://trends.google.co.jp/trending?geo=${trendsGeo}` : '';
+
   const majorRows = [
     { label: '首都', value: country.capital || '不明' },
     { label: '地域', value: country.subregion || '不明' },
@@ -434,6 +473,10 @@ function showCountryStats(country) {
       return `<div style="display:flex;justify-content:space-between;gap:0.75em;padding:0.35em 0;border-bottom:1px solid #f1f5f9;"><span style="color:#64748b;">${ind.label}</span><b style="color:#0f172a;">${withUnit}</b></div>`;
     })
     .join('');
+
+  const trendsRow = trendsUrl
+    ? `<div style="display:flex;justify-content:space-between;gap:0.75em;padding:0.35em 0;border-bottom:1px solid #f1f5f9;"><span style="color:#64748b;">今日のトレンド</span><a href="${trendsUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:underline;">チェック</a></div>`
+    : '';
   const overlay = document.createElement('div');
   overlay.style.position = 'fixed';
   overlay.style.top = '0';
@@ -459,7 +502,7 @@ function showCountryStats(country) {
     <div style="font-size:2em;">${country.flagImage ? `<img src='${country.flagImage}' alt='${country.name}' style='width:2em;height:2em;display:inline-block;vertical-align:middle;'/>` : ''} ${country.name}</div>
     <div style="margin-top:1em;text-align:left;">
       <div style="font-size:0.95em;font-weight:700;color:#334155;margin-bottom:0.4em;">統計指標</div>
-      <div style="max-height:300px;overflow-y:auto;padding-right:0.25em;">${majorStatRows}${indicatorRows}</div>
+      <div style="max-height:300px;overflow-y:auto;padding-right:0.25em;">${majorStatRows}${indicatorRows}${trendsRow}</div>
     </div>
     <div id=\"osm-map\" style=\"margin:1em auto 0 auto;width:300px;height:180px;border-radius:0.5em;overflow:hidden;\"></div>
     <button id=\"closeCountryStatsBtn\" style=\"margin-top:1.5em; padding:0.5em 2em; background:#2563eb; color:#fff; border:none; border-radius:0.5em; font-size:1em; cursor:pointer;\">閉じる</button>
@@ -516,11 +559,54 @@ const mapIndicators = [
   { key: 'sleep_time',         label: '睡眠時間' },
   { key: 'world_heritage',     label: '世界遺産数' },
   { key: 'happiness',          label: '幸福度' },
-  { key: 'borders',            label: '国境数' }
+  { key: 'borders',            label: '国境数' },
+  { key: 'population_density', label: '人口密度' },
+  { key: 'gdp_per_capita',     label: '一人当たりのGDP' },
+  { key: 'rice_per_capita',    label: '一人当たりの米の消費量' },
+  { key: 'wheat_per_capita',   label: '一人当たりの小麦消費量' }
 ];
+
+const mapIndicatorCategories = [
+  { key: 'basic', label: '基本指標', items: ['life_expectancy', 'population', 'area', 'gdp', 'gdp_per_capita', 'population_density'] },
+  { key: 'society', label: '社会・生活', items: ['internet_penetration', 'sleep_time', 'happiness', 'passport'] },
+  { key: 'climate_geo', label: '気候・地理', items: ['average_temperature', 'precipitation', 'average_elevation', 'borders'] },
+  { key: 'food', label: '食料', items: ['rice_consumption', 'wheat_consumption', 'rice_per_capita', 'wheat_per_capita'] },
+  { key: 'culture_tourism', label: '文化・観光', items: ['world_heritage', 'tourists', 'medals', 'bigmac_index'] }
+];
+
+const mapCategoryColorClasses = {
+  basic: {
+    active: 'bg-blue-600 text-white hover:bg-blue-700',
+    inactive: 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+  },
+  society: {
+    active: 'bg-fuchsia-600 text-white hover:bg-fuchsia-700',
+    inactive: 'bg-fuchsia-100 text-fuchsia-800 hover:bg-fuchsia-200'
+  },
+  climate_geo: {
+    active: 'bg-cyan-600 text-white hover:bg-cyan-700',
+    inactive: 'bg-cyan-100 text-cyan-800 hover:bg-cyan-200'
+  },
+  food: {
+    active: 'bg-emerald-600 text-white hover:bg-emerald-700',
+    inactive: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+  },
+  culture_tourism: {
+    active: 'bg-amber-600 text-white hover:bg-amber-700',
+    inactive: 'bg-amber-100 text-amber-800 hover:bg-amber-200'
+  }
+};
 
 const FLAG_TERRAIN_KEY_MAP = 'flag_terrain';
 let currentMapIndicator = FLAG_TERRAIN_KEY_MAP;
+let currentMapIndicatorCategory = null;
+
+function syncMapCategoryByIndicator(indicatorKey) {
+  const found = mapIndicatorCategories.find((cat) => cat.items.includes(indicatorKey));
+  if (found) {
+    currentMapIndicatorCategory = found.key;
+  }
+}
 
 function sendMapMetric(key) {
   currentMapIndicator = key;
@@ -535,30 +621,82 @@ function renderMapIndicatorButtons() {
   if (!container) return;
   container.innerHTML = '';
 
-  // 国旗マップ 特別ボタン（常に先頭表示）
-  const flagBtn = document.createElement('button');
-  flagBtn.textContent = '🌏 国旗マップ';
-  const isFlagActive = currentMapIndicator === FLAG_TERRAIN_KEY_MAP;
-  flagBtn.className = isFlagActive
-    ? 'px-3 py-2 rounded-lg bg-emerald-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-emerald-600 whitespace-nowrap'
-    : 'px-3 py-2 rounded-lg bg-emerald-100 text-emerald-800 font-semibold shadow-sm transition-all duration-200 hover:bg-emerald-200 whitespace-nowrap';
-  flagBtn.onclick = () => { sendMapMetric(FLAG_TERRAIN_KEY_MAP); renderMapIndicatorButtons(); };
+  // 1階層目: カテゴリ（紫系）
+  const categoryWrap = document.createElement('div');
+  categoryWrap.className = 'flex flex-wrap gap-2 mb-2';
 
-  // PC/SP共通: クリックで即時反映（階層なし）
-  const wrap = document.createElement('div');
-  wrap.className = 'grid grid-rows-2 grid-flow-col auto-cols-max gap-2 overflow-x-auto pb-1';
-  wrap.appendChild(flagBtn);
-  mapIndicators.forEach(ind => {
+  // 国旗マップを第一階層の左端に配置
+  const flagTopBtn = document.createElement('button');
+  flagTopBtn.innerHTML = `
+    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M2 12h20"></path>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+    </svg>
+    <span>国旗マップ</span>
+  `;
+  const isFlagActiveTop = currentMapIndicator === FLAG_TERRAIN_KEY_MAP;
+  flagTopBtn.className = isFlagActiveTop
+    ? 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-600 text-white font-semibold shadow-md transition-all duration-200 hover:bg-slate-700 whitespace-nowrap'
+    : 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-200 text-slate-800 font-semibold shadow-sm transition-all duration-200 hover:bg-slate-300 whitespace-nowrap';
+  flagTopBtn.onclick = () => {
+    sendMapMetric(FLAG_TERRAIN_KEY_MAP);
+    currentMapIndicatorCategory = null;
+    renderMapIndicatorButtons();
+  };
+  categoryWrap.appendChild(flagTopBtn);
+
+  mapIndicatorCategories.forEach((cat) => {
+    const catBtn = document.createElement('button');
+    catBtn.textContent = cat.label;
+    const isActiveCat = currentMapIndicatorCategory === cat.key;
+    const catColor = mapCategoryColorClasses[cat.key] || mapCategoryColorClasses.basic;
+    catBtn.className = `px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isActiveCat ? 'shadow-md' : 'shadow-sm'} ${isActiveCat ? catColor.active : catColor.inactive}`;
+    catBtn.onclick = () => {
+      currentMapIndicatorCategory = cat.key;
+      const firstKey = cat.items[0];
+      if (firstKey) {
+        sendMapMetric(firstKey);
+      }
+      renderMapIndicatorButtons();
+    };
+    categoryWrap.appendChild(catBtn);
+  });
+  container.appendChild(categoryWrap);
+
+  // 国旗マップ選択時でも、カテゴリを選んだ場合は第二階層を表示
+  if (currentMapIndicator === FLAG_TERRAIN_KEY_MAP && !currentMapIndicatorCategory) {
+    return;
+  }
+
+  // 2階層目: 指標（青系）
+  const activeCategory = mapIndicatorCategories.find((cat) => cat.key === currentMapIndicatorCategory) || mapIndicatorCategories[0];
+  const activeCategoryColor = mapCategoryColorClasses[activeCategory.key] || mapCategoryColorClasses.basic;
+  const secondRowWrap = document.createElement('div');
+  secondRowWrap.className = 'w-full flex flex-nowrap gap-2 overflow-x-auto pb-1';
+
+  const secondLevelKeys = activeCategory.items;
+
+  const secondLevelIndicators = secondLevelKeys
+    .map((key) => {
+      if (key === FLAG_TERRAIN_KEY_MAP) return { key: FLAG_TERRAIN_KEY_MAP, label: '🌏 国旗マップ' };
+      return mapIndicators.find((ind) => ind.key === key);
+    })
+    .filter(Boolean);
+
+  secondLevelIndicators.forEach(ind => {
     const btn = document.createElement('button');
     btn.textContent = ind.label;
     const isActive = currentMapIndicator === ind.key;
-    btn.className = isActive
-      ? 'px-3 py-2 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600 whitespace-nowrap'
-      : 'px-3 py-2 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200 whitespace-nowrap';
-    btn.onclick = () => { sendMapMetric(ind.key); renderMapIndicatorButtons(); };
-    wrap.appendChild(btn);
+    btn.className = `px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isActive ? 'shadow-md' : 'shadow-sm'} ${isActive ? activeCategoryColor.active : activeCategoryColor.inactive}`;
+    btn.onclick = () => {
+      sendMapMetric(ind.key);
+      syncMapCategoryByIndicator(ind.key);
+      renderMapIndicatorButtons();
+    };
+    secondRowWrap.appendChild(btn);
   });
-  container.appendChild(wrap);
+  container.appendChild(secondRowWrap);
 }
 
 // ===== 国検索機能 =====
@@ -668,8 +806,9 @@ window.addEventListener('DOMContentLoaded', () => {
   // CSVから国データを読み込む
   parseCSVCountries().then(() => {
     renderRegionButtons();
-    renderIndicatorButtons();
     currentIndicator = indicators[0].key;
+    syncRankingCategoryByIndicator(currentIndicator);
+    renderIndicatorButtons();
     renderRankingTable();
     renderCountryList();
     initCountrySearch(); // 国検索初期化（データロード後）
@@ -724,6 +863,7 @@ window.addEventListener('DOMContentLoaded', () => {
     activateTab(tabStatsMap);
     // 統計マップタブを開くたびに国旗マップへリセット
     currentMapIndicator = FLAG_TERRAIN_KEY_MAP;
+    currentMapIndicatorCategory = null;
     if (!statsMapLoaded) {
       // 初回: iframeロード（geo-stats-map.jsのデフォルトがflag_terrain）
       if (statsMapFrame) statsMapFrame.src = 'geo-stats-map.html?embedded=1';

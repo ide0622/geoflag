@@ -10,29 +10,40 @@
   const XLINK_NS = 'http://www.w3.org/1999/xlink';
   const GRADIENT_STOPS = ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'];
   const METRIC_GRADIENT_STOPS = {
-    life_expectancy: ['#ecfdf5', '#bbf7d0', '#4ade80', '#16a34a', '#14532d'],
+    life_expectancy: ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
     population: ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
-    area: ['#f0fdf4', '#dcfce7', '#86efac', '#22c55e', '#14532d'],
-    gdp: ['#fff7ed', '#fed7aa', '#fb923c', '#ea580c', '#7c2d12'],
-    internet_penetration: ['#ecfeff', '#a5f3fc', '#22d3ee', '#0891b2', '#164e63'],
-    medals: ['#fefce8', '#fef08a', '#facc15', '#ca8a04', '#713f12'],
-    passport: ['#f5f3ff', '#ddd6fe', '#a78bfa', '#7c3aed', '#4c1d95'],
-    tourists: ['#fdf4ff', '#f5d0fe', '#e879f9', '#c026d3', '#701a75'],
-    precipitation: ['#ecfeff', '#bae6fd', '#38bdf8', '#0284c7', '#0c4a6e'],
-    average_elevation: ['#fafaf9', '#d6d3d1', '#a8a29e', '#57534e', '#292524'],
-    rice_consumption: ['#fefce8', '#fde68a', '#f59e0b', '#b45309', '#78350f'],
-    wheat_consumption: ['#fffbeb', '#fde68a', '#f59e0b', '#d97706', '#78350f'],
-    average_temperature: ['#ef4444', '#facc15', '#22c55e', '#67e8f9', '#2563eb'],
-    bigmac_index: ['#fef2f2', '#fecaca', '#f87171', '#dc2626', '#7f1d1d'],
-    sleep_time: ['#eef2ff', '#c7d2fe', '#818cf8', '#4f46e5', '#312e81'],
-    world_heritage: ['#f5f3ff', '#ddd6fe', '#c084fc', '#9333ea', '#581c87'],
-    happiness: ['#fff7ed', '#ffedd5', '#fdba74', '#f97316', '#9a3412'],
-    borders: ['#f1f5f9', '#cbd5e1', '#94a3b8', '#475569', '#1e293b'],
+    area: ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
+    gdp: ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
+    internet_penetration: ['#fdf4ff', '#fae8ff', '#f0abfc', '#d946ef', '#a21caf'],
+    medals: ['#fffbeb', '#fef3c7', '#fcd34d', '#f59e0b', '#b45309'],
+    passport: ['#fdf4ff', '#fae8ff', '#f0abfc', '#d946ef', '#a21caf'],
+    tourists: ['#fffbeb', '#fef3c7', '#fcd34d', '#f59e0b', '#b45309'],
+    precipitation: ['#ecfeff', '#cffafe', '#67e8f9', '#06b6d4', '#0e7490'],
+    average_elevation: ['#ecfeff', '#cffafe', '#67e8f9', '#06b6d4', '#0e7490'],
+    rice_consumption: ['#ecfdf5', '#d1fae5', '#6ee7b7', '#10b981', '#047857'],
+    wheat_consumption: ['#ecfdf5', '#d1fae5', '#6ee7b7', '#10b981', '#047857'],
+    average_temperature: ['#ecfeff', '#cffafe', '#67e8f9', '#06b6d4', '#0e7490'],
+    bigmac_index: ['#fffbeb', '#fef3c7', '#fcd34d', '#f59e0b', '#b45309'],
+    sleep_time: ['#fdf4ff', '#fae8ff', '#f0abfc', '#d946ef', '#a21caf'],
+    world_heritage: ['#fffbeb', '#fef3c7', '#fcd34d', '#f59e0b', '#b45309'],
+    happiness: ['#fdf4ff', '#fae8ff', '#f0abfc', '#d946ef', '#a21caf'],
+    borders: ['#ecfeff', '#cffafe', '#67e8f9', '#06b6d4', '#0e7490'],
     languages: ['#faf5ff', '#e9d5ff', '#c084fc', '#a21caf', '#581c87'],
     timezones: ['#f0f9ff', '#bae6fd', '#38bdf8', '#0ea5e9', '#0c4a6e'],
     fertility_rate: ['#fdf2f8', '#fbcfe8', '#f472b6', '#db2777', '#831843'],
     median_age: ['#f8fafc', '#e2e8f0', '#94a3b8', '#475569', '#0f172a'],
-    literacy_rate: ['#ecfdf3', '#bbf7d0', '#4ade80', '#16a34a', '#14532d']
+    literacy_rate: ['#ecfdf3', '#bbf7d0', '#4ade80', '#16a34a', '#14532d'],
+    population_density: ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
+    gdp_per_capita: ['#eff6ff', '#bfdbfe', '#60a5fa', '#2563eb', '#1e3a8a'],
+    rice_per_capita: ['#ecfdf5', '#d1fae5', '#6ee7b7', '#10b981', '#047857'],
+    wheat_per_capita: ['#ecfdf5', '#d1fae5', '#6ee7b7', '#10b981', '#047857']
+  };
+
+  const METRIC_FORMULAS = {
+    population_density: '人口密度 = 人口 ÷ 面積 × 1000',
+    gdp_per_capita: '一人当たりGDP = GDP ÷ 人口',
+    rice_per_capita: '一人当たり米消費量 = 米の消費量 ÷ 人口 ÷ 1000',
+    wheat_per_capita: '一人当たり小麦消費量 = 小麦の消費量 ÷ 人口 ÷ 1000'
   };
 
   const INDICATOR_DEFS = [
@@ -59,7 +70,11 @@
     { key: 'timezones', label: 'タイムゾーン数', unit: '', headers: ['timezones', 'タイムゾーン数'], minValue: 0, maxValue: 24 },
     { key: 'fertility_rate', label: '合計特殊出生率', unit: '', headers: ['fertility_rate', '合計特殊出生率', '出生率'], minValue: 0, maxValue: 10 },
     { key: 'median_age', label: '年齢中央値', unit: '歳', headers: ['median_age', '年齢中央値'], minValue: 0, maxValue: 70 },
-    { key: 'literacy_rate', label: '識字率', unit: '%', headers: ['literacy_rate', '識字率'], minValue: 0, maxValue: 100 }
+    { key: 'literacy_rate', label: '識字率', unit: '%', headers: ['literacy_rate', '識字率'], minValue: 0, maxValue: 100 },
+    { key: 'population_density', label: '人口密度', unit: '人/km²', headers: [], minValue: 0, maxValue: 50000, derived: true },
+    { key: 'gdp_per_capita', label: '一人当たりのGDP', unit: 'US$/人', headers: [], minValue: 0, maxValue: 300000, derived: true },
+    { key: 'rice_per_capita', label: '一人当たりの米の消費量', unit: 'kg/人', headers: [], minValue: 0, maxValue: 1000, derived: true },
+    { key: 'wheat_per_capita', label: '一人当たりの小麦消費量', unit: 'kg/人', headers: [], minValue: 0, maxValue: 1000, derived: true }
   ];
 
   const state = {
@@ -227,6 +242,39 @@
     return value;
   }
 
+  function computeDerivedMetrics(metrics) {
+    const population = metrics.population;
+    const area = metrics.area;
+    const gdp = metrics.gdp;
+    const rice = metrics.rice_consumption;
+    const wheat = metrics.wheat_consumption;
+
+    const safePopulation = (typeof population === 'number' && population > 0) ? population : null;
+    const safeArea = (typeof area === 'number' && area > 0) ? area : null;
+
+    const rawDerived = {
+      population_density: (safePopulation !== null && safeArea !== null)
+        ? (safePopulation / safeArea) * 1000
+        : null,
+      gdp_per_capita: (safePopulation !== null && typeof gdp === 'number')
+        ? (gdp / safePopulation)
+        : null,
+      rice_per_capita: (safePopulation !== null && typeof rice === 'number')
+        ? (rice / safePopulation / 1000)
+        : null,
+      wheat_per_capita: (safePopulation !== null && typeof wheat === 'number')
+        ? (wheat / safePopulation / 1000)
+        : null
+    };
+
+    const out = {};
+    for (const [key, value] of Object.entries(rawDerived)) {
+      const def = getIndicatorDefByKey(key);
+      out[key] = def ? sanitizeMetricValue(def, value) : value;
+    }
+    return out;
+  }
+
   function addEquatorLine(map) {
     const equator = [[0, -180], [0, 180]];
     L.polyline(equator, {
@@ -356,7 +404,9 @@
     }
 
     state.domain = { min, max, rawMin, rawMax };
-    setMetricStatus(`有効データ: ${values.length.toLocaleString('ja-JP')} カ国（色分けは下位5%〜上位95%で調整）`, false);
+    const formula = METRIC_FORMULAS[state.metricKey];
+    const formulaText = formula ? ` / 計算式: ${formula}` : '';
+    setMetricStatus(`有効データ: ${values.length.toLocaleString('ja-JP')} カ国（色分けは下位5%〜上位95%で調整）${formulaText}`, false);
   }
 
   function getFillColor(country) {
@@ -397,6 +447,9 @@
       return;
     }
 
+    const trendsGeo = (country.iso_a2 || '').toUpperCase();
+    const trendsUrl = trendsGeo ? `https://trends.google.co.jp/trending?geo=${trendsGeo}` : '';
+
     const ind = getActiveIndicatorByKey(state.metricKey);
     const selectedValue = isFlagTerrainMode()
       ? '国旗モード'
@@ -404,6 +457,10 @@
     const selectedMetricHtml = isFlagTerrainMode()
       ? `<div class="text-xl font-extrabold text-sky-700">${selectedValue}</div>`
       : `<div class="text-xl font-extrabold text-sky-700">${ind?.label || state.metricKey}: ${selectedValue}</div>`;
+    const formulaText = METRIC_FORMULAS[state.metricKey];
+    const formulaHtml = formulaText
+      ? `<div class="mt-1 text-xs text-slate-500">計算式: ${formulaText}</div>`
+      : '';
 
     const rows = state.indicators.map((metric) => {
       const k = metric.key;
@@ -412,13 +469,18 @@
       return `<li class="flex items-center justify-between gap-3 py-1 border-b border-slate-100"><span class="text-slate-500">${m.label}</span><span class="font-semibold text-slate-800">${formatValue(country.metrics[k], k)}</span></li>`;
     }).filter(Boolean).join('');
 
+    const trendsRow = trendsUrl
+      ? `<li class="flex items-center justify-between gap-3 py-1 border-b border-slate-100"><span class="text-slate-500">今日のトレンド</span><a href="${trendsUrl}" target="_blank" rel="noopener noreferrer" class="font-semibold text-blue-600 underline">チェック</a></li>`
+      : '';
+
     countryDetail.innerHTML = `
       <div class="mb-3">
         <div class="text-2xl font-bold">${country.flag || '🏳️'} ${country.country || '不明'}</div>
         <div class="mt-2 text-sm text-slate-500">選択中の指標</div>
         ${selectedMetricHtml}
+        ${formulaHtml}
       </div>
-      <ul class="text-sm max-h-[52vh] overflow-y-auto pr-1">${rows}</ul>
+      <ul class="text-sm max-h-[52vh] overflow-y-auto pr-1">${rows}${trendsRow}</ul>
     `;
   }
 
@@ -595,7 +657,7 @@
     const indicatorCols = {};
     const valueCountByKey = new Map();
     for (const ind of INDICATOR_DEFS) {
-      indicatorCols[ind.key] = findHeaderIndex(header, ind.headers);
+      indicatorCols[ind.key] = ind.derived ? -1 : findHeaderIndex(header, ind.headers);
       valueCountByKey.set(ind.key, 0);
     }
 
@@ -610,12 +672,21 @@
 
       const metrics = {};
       for (const ind of INDICATOR_DEFS) {
+        if (ind.derived) continue;
         const idx = indicatorCols[ind.key];
         const rawValue = idx >= 0 ? toNumber(cells[idx]) : null;
         const v = sanitizeMetricValue(ind, rawValue);
         metrics[ind.key] = v;
         if (v !== null) {
           valueCountByKey.set(ind.key, (valueCountByKey.get(ind.key) || 0) + 1);
+        }
+      }
+
+      const derivedMetrics = computeDerivedMetrics(metrics);
+      for (const [k, v] of Object.entries(derivedMetrics)) {
+        metrics[k] = v;
+        if (v !== null) {
+          valueCountByKey.set(k, (valueCountByKey.get(k) || 0) + 1);
         }
       }
 
@@ -634,6 +705,7 @@
     state.indicators = INDICATOR_DEFS.filter((ind) => {
       const hasColumn = indicatorCols[ind.key] >= 0;
       const hasValue = (valueCountByKey.get(ind.key) || 0) > 0;
+      if (ind.derived) return hasValue;
       return hasColumn && hasValue;
     });
 
