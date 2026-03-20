@@ -430,7 +430,7 @@ function renderCountryList() {
   const filtered = currentRegion === 'all' ? countries : countries.filter(c => c.region === currentRegion);
   // 件数表示
   const countDiv = document.createElement('div');
-  countDiv.className = 'col-span-4 text-right text-sm text-gray-500 mb-2';
+  countDiv.className = 'col-span-4 text-right text-[0.4375rem] leading-none text-gray-500 m-0 p-0';
   countDiv.textContent = `取得国数: ${filtered.length}`;
   listDiv.appendChild(countDiv);
   filtered.forEach(c => {
@@ -822,6 +822,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const countryListTab = document.getElementById('countryListTab');
   const rankingTab = document.getElementById('rankingTab');
   const statsMapTab = document.getElementById('statsMapTab');
+  const countryListSearchSection = document.getElementById('countryListSearchSection');
   const statsMapFrame = document.getElementById('statsMapFrame');
   const regionSection = document.getElementById('regionSection');
   let statsMapLoaded = false;
@@ -855,6 +856,12 @@ window.addEventListener('DOMContentLoaded', () => {
     if (regionSection) {
       if (activeTab === tabStatsMap) regionSection.classList.add('hidden');
       else regionSection.classList.remove('hidden');
+    }
+
+    // 国名検索は国一覧タブのみ表示
+    if (countryListSearchSection) {
+      if (activeTab === tabCountryList) countryListSearchSection.classList.remove('hidden');
+      else countryListSearchSection.classList.add('hidden');
     }
   }
 
