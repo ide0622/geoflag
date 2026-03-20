@@ -257,13 +257,13 @@ function renderIndicatorButtons() {
 
   // 1階層目: カテゴリ
   const categoryBar = document.createElement('div');
-  categoryBar.className = 'flex flex-wrap gap-2 mb-2';
+  categoryBar.className = 'w-full flex flex-nowrap gap-2 overflow-x-auto pb-1 mb-2';
   indicatorCategories.forEach(cat => {
     const isOpen = currentIndicatorCategory === cat.key;
     const catColor = rankingCategoryColorClasses[cat.key] || rankingCategoryColorClasses.basic;
     const btn = document.createElement('button');
     btn.textContent = cat.label;
-    btn.className = `px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isOpen ? 'shadow-md' : 'shadow-sm'} ${isOpen ? catColor.active : catColor.inactive}`;
+    btn.className = `shrink-0 px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isOpen ? 'shadow-md' : 'shadow-sm'} ${isOpen ? catColor.active : catColor.inactive}`;
     btn.onclick = () => {
       currentIndicatorCategory = cat.key;
       const firstKey = cat.items[0];
@@ -287,7 +287,7 @@ function renderIndicatorButtons() {
     const isActive = currentIndicator === ind.key;
     const b = document.createElement('button');
     b.textContent = ind.label;
-    b.className = `px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${isActive ? 'shadow-md' : 'shadow-sm'} ${isActive ? activeColor.active : activeColor.inactive}`;
+    b.className = `shrink-0 px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all duration-200 ${isActive ? 'shadow-md' : 'shadow-sm'} ${isActive ? activeColor.active : activeColor.inactive}`;
     b.onclick = () => {
       currentIndicator = ind.key;
       syncRankingCategoryByIndicator(ind.key);
@@ -401,13 +401,14 @@ function renderRegionButtons() {
   const regionDiv = document.getElementById('regionButtons');
   if (!regionDiv) return;
   regionDiv.innerHTML = '';
+  regionDiv.className = 'w-full flex flex-nowrap gap-2 overflow-x-auto pb-1';
   // 「すべて」ボタン
   const allBtn = document.createElement('button');
   allBtn.textContent = 'すべて';
   const isAllActive = currentRegion === 'all';
   allBtn.className = isAllActive
-    ? 'px-4 py-2 m-1 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600'
-    : 'px-4 py-2 m-1 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200';
+    ? 'shrink-0 px-4 py-2 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600 whitespace-nowrap'
+    : 'shrink-0 px-4 py-2 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200 whitespace-nowrap';
   allBtn.onclick = () => { currentRegion = 'all'; renderRegionButtons(); renderCountryList(); renderRankingTable(); };
   regionDiv.appendChild(allBtn);
   regions.forEach(region => {
@@ -415,8 +416,8 @@ function renderRegionButtons() {
     btn.textContent = regionNameMap[region] || region;
     const isActive = currentRegion === region;
     btn.className = isActive
-      ? 'px-4 py-2 m-1 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600'
-      : 'px-4 py-2 m-1 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200';
+      ? 'shrink-0 px-4 py-2 rounded-lg bg-blue-500 text-white font-semibold shadow-md transition-all duration-200 hover:bg-blue-600 whitespace-nowrap'
+      : 'shrink-0 px-4 py-2 rounded-lg bg-blue-100 text-blue-800 font-semibold shadow-sm transition-all duration-200 hover:bg-blue-200 whitespace-nowrap';
     btn.onclick = () => { currentRegion = region; renderRegionButtons(); renderCountryList(); renderRankingTable(); };
     regionDiv.appendChild(btn);
   });
@@ -623,7 +624,7 @@ function renderMapIndicatorButtons() {
 
   // 1階層目: カテゴリ（紫系）
   const categoryWrap = document.createElement('div');
-  categoryWrap.className = 'flex flex-wrap gap-2 mb-2';
+  categoryWrap.className = 'w-full flex flex-nowrap gap-2 overflow-x-auto pb-1 mb-2';
 
   // 国旗マップを第一階層の左端に配置
   const flagTopBtn = document.createElement('button');
@@ -637,8 +638,8 @@ function renderMapIndicatorButtons() {
   `;
   const isFlagActiveTop = currentMapIndicator === FLAG_TERRAIN_KEY_MAP;
   flagTopBtn.className = isFlagActiveTop
-    ? 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-600 text-white font-semibold shadow-md transition-all duration-200 hover:bg-slate-700 whitespace-nowrap'
-    : 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-200 text-slate-800 font-semibold shadow-sm transition-all duration-200 hover:bg-slate-300 whitespace-nowrap';
+    ? 'shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-600 text-white font-semibold shadow-md transition-all duration-200 hover:bg-slate-700 whitespace-nowrap'
+    : 'shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-200 text-slate-800 font-semibold shadow-sm transition-all duration-200 hover:bg-slate-300 whitespace-nowrap';
   flagTopBtn.onclick = () => {
     sendMapMetric(FLAG_TERRAIN_KEY_MAP);
     currentMapIndicatorCategory = null;
@@ -651,7 +652,7 @@ function renderMapIndicatorButtons() {
     catBtn.textContent = cat.label;
     const isActiveCat = currentMapIndicatorCategory === cat.key;
     const catColor = mapCategoryColorClasses[cat.key] || mapCategoryColorClasses.basic;
-    catBtn.className = `px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isActiveCat ? 'shadow-md' : 'shadow-sm'} ${isActiveCat ? catColor.active : catColor.inactive}`;
+    catBtn.className = `shrink-0 px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isActiveCat ? 'shadow-md' : 'shadow-sm'} ${isActiveCat ? catColor.active : catColor.inactive}`;
     catBtn.onclick = () => {
       currentMapIndicatorCategory = cat.key;
       const firstKey = cat.items[0];
@@ -688,7 +689,7 @@ function renderMapIndicatorButtons() {
     const btn = document.createElement('button');
     btn.textContent = ind.label;
     const isActive = currentMapIndicator === ind.key;
-    btn.className = `px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isActive ? 'shadow-md' : 'shadow-sm'} ${isActive ? activeCategoryColor.active : activeCategoryColor.inactive}`;
+    btn.className = `shrink-0 px-3 py-2 rounded-lg font-semibold whitespace-nowrap transition-all duration-200 ${isActive ? 'shadow-md' : 'shadow-sm'} ${isActive ? activeCategoryColor.active : activeCategoryColor.inactive}`;
     btn.onclick = () => {
       sendMapMetric(ind.key);
       syncMapCategoryByIndicator(ind.key);
